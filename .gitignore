@@ -1,3 +1,6 @@
+# editor backup files
+*~
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -47,7 +50,7 @@ coverage.xml
 *.mo
 *.pot
 
-# Django stuff:
+# Typical output files
 *.log
 
 # Sphinx documentation

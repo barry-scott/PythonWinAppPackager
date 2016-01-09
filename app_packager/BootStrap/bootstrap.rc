@@ -1,0 +1,10 @@
+#include "bootstrap-resource-ids.h"
+
+stringtable
+language 0, 0
+begin
+    IDS_PYTHON_DLL          "pythonMN.dll"
+    IDS_MAIN_PY_MODULE      "the_main_script.py"
+
+    IDS_PY_VERBOSE  "0"
+end
