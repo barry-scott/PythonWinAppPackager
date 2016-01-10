@@ -34,10 +34,10 @@ class DistributionAppPackager(distutils.dist.Distribution):
         return True
 
 setuptools.setup(
-    distclass=DistributionAppPackager,
-    libraries = [],
+    name='app_packager',
 
-    name='PythonWinAppPackager',
+    # force tag to include win32/win64 marker
+    distclass=DistributionAppPackager, libraries = [],
 
     version=open('version.txt').read().strip(),
 
@@ -84,7 +84,9 @@ setuptools.setup(
 
     packages=['app_packager'],
 
-    data_files= [(r'app_packager\BootStrap\obj',
-                    [r'app_packager\BootStrap\obj\bootstrap-cli.exe'
-                    ,r'app_packager\BootStrap\obj\bootstrap-gui.exe'])]
+    package_data={'app_packager':
+                        ['BootStrap/obj/bootstrap-cli.exe'
+                        ,'BootStrap/obj/bootstrap-gui.exe']},
+
+    install_requires="namedstruct >=1"
 )
