@@ -34,7 +34,7 @@ class DistributionAppPackager(distutils.dist.Distribution):
         return True
 
 setuptools.setup(
-    name='app_packager',
+    name='win_app_packager',
 
     # force tag to include win32/win64 marker
     distclass=DistributionAppPackager, libraries = [],
@@ -82,9 +82,9 @@ setuptools.setup(
     # What does your project relate to?
     keywords='development',
 
-    packages=['app_packager'],
+    packages=['win_app_packager'],
 
-    package_data={'app_packager':
+    package_data={'win_app_packager':
                         ['BootStrap/obj/bootstrap-cli.exe'
                         ,'BootStrap/obj/bootstrap-gui.exe']},
 

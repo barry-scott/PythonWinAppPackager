@@ -24,14 +24,14 @@ def main( argv ):
     import os
     sys.path.insert( 0, os.path.dirname( argv[0] ) )
 
-    import app_package_builder
-    app_package = app_package_builder.AppPackage( argv )
+    import win_app_package_builder
+    win_app_package = win_app_package_builder.AppPackage( argv )
 
     if main_program is not None:
-        return app_package.build( all_module_names )
+        return win_app_package.build( all_module_names )
 
     else:
-        return app_package.usage()
+        return win_app_package.usage()
 
     return 0        
 

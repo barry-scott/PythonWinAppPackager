@@ -1,6 +1,6 @@
 #/usr/bin/python3
 #
-#   app_package_builder.py
+#   win_app_package_builder.py
 #
 import sys
 import os
@@ -9,8 +9,8 @@ import uuid
 import ctypes
 import ctypes.wintypes
 
-import app_package_win_pe_info
-import app_package_exe_config
+import win_app_packager.win_app_package_win_pe_info
+import win_app_packager.win_app_package_exe_config
 
 class AppPackageError(Exception):
     pass
@@ -45,7 +45,7 @@ class AppPackage:
         self.__all_dlls = set()
 
         # how to find app packager resources
-        self.app_packager_folder = pathlib.Path( sys.argv[0] ).parent
+        self.win_app_packager_folder = pathlib.Path( sys.argv[0] ).parent
 
     def debug( self, msg ):
         if self.enable_debug:
@@ -66,6 +66,7 @@ class AppPackage:
         return 1
 
     def parseArgs( self ):
+        print( self.argv )
         all_positional_args = []
         index = 1
         while index < len( self.argv ):
@@ -109,12 +110,17 @@ class AppPackage:
 
             index += 1
 
-        if len( all_positional_args ) == 2:
-            self.main_program = all_positional_args[0]
-            self.package_folder = pathlib.Path( all_positional_args[1] )
+        print( all_positional_args )
 
-        else:
-            raise AppPackageError( 'Expecting 2 position args' )
+        if( len( all_positional_args ) < 1
+        or all_positional_args[0] != 'build' ):
+            raise AppPackageError( 'Expecting command name "build"' )
+
+        self.main_program = all_positional_args[1]
+        if self.main_program.endswith( '.py' ):
+            self.main_program = self.main_program[:-len('.py')]
+
+        self.package_folder = pathlib.Path( all_positional_args[2] )
 
         if self.app_name is None:
             self.app_name = self.main_program
@@ -203,23 +209,31 @@ class AppPackage:
         self.__all_library_files.add( PackageFile( filename, library_filename_suffix ) )
 
     def addWinPeFileToPackage( self, filename, library_filename_suffix ):
-        if filename not in self.__all_dlls:
+        pf = PackageFile( filename, library_filename_suffix )
+        if pf not in self.__all_dlls:
             self.verbose( 'Adding DLL %s from %s' % (library_filename_suffix, filename) )
-            self.__all_dlls.add( PackageFile( filename, library_filename_suffix ) )
+            self.__all_dlls.add( pf )
 
             self.addWinPeFileDependenciesToPackage( filename )
 
     def addWinPeFileDependenciesToPackage( self, filename ):
-        all_dlls = app_package_win_pe_info.getPeImportDlls( self, filename )
-        for dll in all_dlls:
+        all_dlls = win_app_packager.win_app_package_win_pe_info.getPeImportDlls( self, filename )
+        self.verbose( 'Dependancies of DLL %s:' % (filename,) )
+        for dll in sorted( all_dlls ):
+            self.verbose( '   %s' % (dll,) )
+
+        all_dll_to_be_scanned = []
+
+        for dll in sorted( all_dlls ):
             dll_path = self.findDll( dll, filename.parent )
             if self.isStandardDll( dll_path ):
                 self.verbose( 'No need to package standard DLL %s' % (dll_path,) )
                 continue
 
-            if dll_path not in self.__all_dlls:
-                self.verbose( 'Adding DLL %s' % (dll_path,) )
-                self.__all_dlls.add( PackageFile( dll_path, self.findLibraryLocationForDll( dll_path ) ) )
+            all_dll_to_be_scanned.append( (dll_path, self.findLibraryLocationForDll( dll_path )) )
+
+        for dll_path, library_filename_suffix in all_dll_to_be_scanned:
+            self.addWinPeFileToPackage( dll_path, library_filename_suffix )
 
     def findLibraryLocationForDll( self, dll_path ):
         for path in [sys.prefix]+sys.path:
@@ -325,10 +339,10 @@ class AppPackage:
 
         # copy the right boot strap
         if self.app_type == self.APP_TYPE_CLI:
-            bootstrap_filename = self.app_packager_folder / 'BootStrap' / 'obj' / 'bootstrap-cli.exe'
+            bootstrap_filename = self.win_app_packager_folder / 'BootStrap' / 'obj' / 'bootstrap-cli.exe'
 
         elif self.app_type == self.APP_TYPE_GUI:
-            bootstrap_filename = self.app_packager_folder / 'BootStrap' / 'obj' / 'bootstrap-gui.exe'
+            bootstrap_filename = self.win_app_packager_folder / 'BootStrap' / 'obj' / 'bootstrap-gui.exe'
 
         bootstrap_exe = pathlib.Path( '%s.exe' % (self.app_name,) )
         p = PackageFile( bootstrap_filename, bootstrap_exe )
@@ -353,7 +367,7 @@ class AppPackage:
             sln_file = (self.package_folder / bootstrap_exe ).with_suffix( '.sln' )
             sln_file.write_text( self.vc_14_solution_file_template % sln_vars )
 
-        app_package_exe_config.configureAppExeBootStrap( 
+        win_app_packager.win_app_package_exe_config.configureAppExeBootStrap( 
             str( self.package_folder / bootstrap_exe ),
             'python%d%d.dll' % (sys.version_info.major, sys.version_info.minor),
             self.main_program,

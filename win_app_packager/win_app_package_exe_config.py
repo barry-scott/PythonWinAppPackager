@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #
-#   app_package_exe_config.py
+#   win_app_package_exe_config.py
 #
 import sys
 
@@ -52,7 +52,9 @@ def main( argv ):
         return configureAppExeBootStrap( exe_filename, python_dll, main_py_module, install_key, install_value )
 
     elif argv[1:2] == ['flags']:
-        py_verbose = argv[2]
+        exe_filename = argv[2]
+
+        py_verbose = argv[3]
 
         return configureAppExePyFlags( exe_filename, py_verbose )
 
