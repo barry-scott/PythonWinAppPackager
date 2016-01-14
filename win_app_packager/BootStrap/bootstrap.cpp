@@ -58,13 +58,14 @@ extern "C" {
 
 DECLVAR( int, Py_VerboseFlag );
 DECLVAR( int, Py_IgnoreEnvironmentFlag );
-DECLPROC( void, Py_Initialize, (void) );
-DECLPROC( void, Py_SetProgramName, (wchar_t *) );
-DECLPROC( void, Py_SetPythonHome, (wchar_t *) );
-DECLPROC( void, Py_SetPath, (const wchar_t *) );
-DECLPROC( void, PySys_SetArgvEx, (int argc, wchar_t **argv, int updatepath) );
-DECLPROC(  int, PyRun_SimpleString, (const char *script) );
-DECLPROC( void, PyEval_InitThreads, (void) );
+DECLPROC(   void, Py_Initialize, (void) );
+DECLPROC(   void, Py_SetProgramName, (wchar_t *) );
+DECLPROC(   void, Py_SetPythonHome, (wchar_t *) );
+DECLPROC(   void, Py_SetPath, (const wchar_t *) );
+DECLPROC(   void, PySys_SetArgvEx, (int argc, wchar_t **argv, int updatepath) );
+DECLPROC(    int, PyRun_SimpleString, (const char *script) );
+DECLPROC(   void, PyEval_InitThreads, (void) );
+DECLPROC( char *, Py_EncodeLocale, (const wchar_t *text, size_t *error_pos) );
 }
 
 class CliAppError: public std::exception
@@ -137,6 +138,7 @@ public:
         GETPROC( PySys_SetArgvEx );
         GETPROC( PyRun_SimpleString );
         GETPROC( PyEval_InitThreads );
+        GETPROC( Py_EncodeLocale );
 
         wchar_t python_home[ c_pathname_size ];
         StringCchCopyW( python_home, c_pathname_size, m_installation_folder );
@@ -161,24 +163,16 @@ public:
         NAME( PySys_SetArgvEx )( argc, argv, 0 );
 
         static const int len = 1024;
-        char boot_script[ len ];
-        char main_py_module[ c_filename_size ];
-        for( int i=0; ; ++i )
-        {
-            main_py_module[i] = static_cast< char >( m_main_py_module[i] );
-            if( main_py_module[i] == 0 )
-            {
-                break;
-            }
-        }
+        wchar_t boot_script[ len ];
 
-        StringCchCopyA( boot_script, len, "import " );
-        StringCchCatA( boot_script, len, main_py_module );
-        StringCchCatA( boot_script, len, "; " );
-        StringCchCatA( boot_script, len, main_py_module );
-        StringCchCatA( boot_script, len, ".run()" );
+        StringCchCopyW( boot_script, len, L"import runpy;runpy.run_path( '" );
+        StringCchCatW( filename, c_pathname_size, m_installation_folder );
+        StringCchCatW( filename, c_pathname_size, L"\\" RESOURCE_FOLDER_NAME "\\" );
+        StringCchCatW( boot_script, len, m_main_py_module );
+        StringCchCatW( boot_script, len, L".py', run_name='__main__' );" );
 
-        return NAME( PyRun_SimpleString )( boot_script );
+        char *locale_boot_script = NAME( Py_EncodeLocale )( boot_script, NULL );
+        return NAME( PyRun_SimpleString )( locale_boot_script );
     }
 
     void readConfigFromResources()
