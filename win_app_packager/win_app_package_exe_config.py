@@ -40,6 +40,7 @@ resource_ids = {
     'IDS_PY_VERBOSE':           65*STRINGTABLE_BUNDLE_SIZE + 0,
     }
 
+# called when used standalone
 def main( argv ):
     if argv[1:2] == ['bootstrap']:
         exe_filename = argv[2]
@@ -66,6 +67,30 @@ def main( argv ):
         print( '       %s flags <exefile> <verbose>' % (argv[0],) )
         print( '       %s create <header-filename>' % (argv[0],) )
         return 1
+
+
+# called when part of win_app_packager
+def flagsCommand( argv ):
+    if len(argv) != 4:
+        return usage()
+
+    exe_filename = argv[2]
+
+    py_verbose = argv[3]
+
+    return configureAppExePyFlags( exe_filename, py_verbose )
+
+# called when part of win_app_packager
+def usage():
+################################################################################
+    print(
+'''python3 -m win_app_packager flags <exe-file> <verbose>'
+  exe-file
+    - the win_app_package create EXE file to modify
+  verbose
+    - either "0" or "1". The value to see the python verbose flag to.
+''' )
+    return 1
 
 def createResourceIdHeaderFile( h_file ):
     with open( h_file, 'w' ) as f:

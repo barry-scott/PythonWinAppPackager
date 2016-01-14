@@ -1,42 +1,22 @@
-#!/usr/bin/python3
-import sys
-import importlib
-
 #
-#   Do the minimum imports to get a clean list
-#   of all module names to process
+#   __init__.py
 #
-def main( argv ):
-    main_program = None
-    for arg in argv[1:]:
-        if arg.startswith( '--' ):
-            continue
-        main_program = arg
-        break
+__commands = set( ['build', 'flags'] )
 
-    if main_program is not None:
-        # load the program to be packaged
-        importlib.import_module( main_program )
+def dispatchCommand( argv ):
+    if len(argv) < 2 or argv[1] not in __commands:
+        from . import win_app_package_builder
+        win_app_package_builder.AppPackage().usage()
 
-        all_module_names = list( sys.modules.keys() )
+        from . import win_app_package_exe_config
+        win_app_package_exe_config.usage()
 
-    # add the folder containing the app packager files
-    import os
-    sys.path.insert( 0, os.path.dirname( argv[0] ) )
+        return 1
 
-    import win_app_package_builder
-    win_app_package = win_app_package_builder.AppPackage( argv )
+    if argv[1] == 'build':
+        from . import win_app_package_builder
+        return win_app_package_builder.AppPackage().buildCommand( argv )
 
-    if main_program is not None:
-        return win_app_package.build( all_module_names )
-
-    else:
-        return win_app_package.usage()
-
-    return 0        
-
-def __main__():
-    print( '__main__' )
-
-if __name__ == '__main__':
-    sys.exit( main( sys.argv ) )
+    elif argv[1] == 'flags':
+        from . import win_app_package_exe_config
+        win_app_package_exe_config.flagsCommand( argv )

@@ -8,9 +8,11 @@ import pathlib
 import uuid
 import ctypes
 import ctypes.wintypes
+import modulefinder
+import importlib
 
-import win_app_packager.win_app_package_win_pe_info
-import win_app_packager.win_app_package_exe_config
+from . import win_app_package_win_pe_info
+from . import win_app_package_exe_config
 
 class AppPackageError(Exception):
     pass
@@ -22,9 +24,46 @@ class AppPackage:
     resource_folder = pathlib.Path( 'PyWinAppRes' )
     library_folder = resource_folder / 'lib'
 
-    def __init__( self, argv ):
-        self.argv = argv
+    all_modules_allowed_to_be_missing = set( [
+        '_dummy_threading',
+        '_frozen_importlib',
+        '_frozen_importlib_external',
+        '_posixsubprocess',
+        '_scproxy',
+        '_winreg',
+        'ce',
+        'grp',
+        'java.lang',
+        'org.python.core',
+        'os.path',
+        'posix',
+        'pwd',
+        'readline',
+        'termios',
+        'vms_lib',
+        ] )
 
+    all_imported_modules_to_exclude = set( [
+        'ctypes',
+        'ctypes._endian',
+        'ctypes.util',
+        'ctypes.wintypes',
+        'importlib',
+        'importlib._bootstrap',
+        'importlib._bootstrap_external',
+        'importlib.abc',
+        'importlib.machinery',
+        'importlib.util',
+        'modulefinder',
+        'pathlib',
+        'uuid',
+        'win_app_packager',
+        'win_app_packager.win_app_package_builder',
+        'win_app_packager.win_app_package_exe_config',
+        'win_app_packager.win_app_package_win_pe_info',
+        ] )
+
+    def __init__( self ):
         # options
         self.enable_debug = False
         self.enable_verbose = False
@@ -61,16 +100,51 @@ class AppPackage:
     def error( self, msg ):
         print( 'Error: %s' % (msg,) )
 
+    def warning( self, msg ):
+        print( 'Warn: %s' % (msg,) )
+
     def usage( self ):
-        print( 'app-packager.py <main-script> [<options>...]' )
+################################################################################
+        print(
+'''python3 -m win_app_packager build <main-script> <package-folder> [<options>...]
+  main-script
+    - python main module
+  package-folder
+    - folder to create package into
+
+  Where <options> are:
+    --console
+    --cli
+        build a windows console progam (the default).
+    --gui
+        build a windows gui program.
+    --name
+        name the program (defaults to the <main-script> name).
+    --install-key <key>  --install-value <value>
+        The install path of the package can be read
+        from the windows registry from key HKLM:<key> value <value>
+        otherwise the install path is assumed to be the same folder
+        that the .EXE files is in.
+    --merge
+        Do not clean out the <package-folder> before building the package.
+        Useful for putting multiple programs into one package.
+    --verbose
+        Output extra information about the build process.
+    --debug
+        Developer option. Output lots of details about the build process.
+    --bootstrap-debug
+        Developer option. Copy PDF files and setup a Microsoft Visual 
+        Studio solution (.sln) file suitable for running the bootstrap
+        under the debugger.
+'''
+)
         return 1
 
-    def parseArgs( self ):
-        print( self.argv )
+    def parseArgs( self, argv ):
         all_positional_args = []
         index = 1
-        while index < len( self.argv ):
-            arg = self.argv[index]
+        while index < len( argv ):
+            arg = argv[index]
             if arg.startswith( '--' ):
                 if arg == '--debug':
                     self.enable_debug = True
@@ -87,15 +161,15 @@ class AppPackage:
                 elif arg == '--gui':
                     self.app_type = self.APP_TYPE_GUI
 
-                elif arg == '--name' and (index+1) < len( self.argv ):
-                    self.app_name = self.argv[index+1]
+                elif arg == '--name' and (index+1) < len( argv ):
+                    self.app_name = argv[index+1]
                     index += 1
 
-                elif arg == '--install-key' and (index+1) < len( self.argv ):
+                elif arg == '--install-key' and (index+1) < len( argv ):
                     self.app_install_key = sys.argv[index+1]
                     index += 1
 
-                elif arg == '--install-value' and (index+1) < len( self.argv ):
+                elif arg == '--install-value' and (index+1) < len( argv ):
                     self.app_install_value = sys.argv[index+1]
                     index += 1
 
@@ -110,28 +184,23 @@ class AppPackage:
 
             index += 1
 
-        print( all_positional_args )
-
         if( len( all_positional_args ) < 1
         or all_positional_args[0] != 'build' ):
             raise AppPackageError( 'Expecting command name "build"' )
 
         self.main_program = all_positional_args[1]
-        if self.main_program.endswith( '.py' ):
-            self.main_program = self.main_program[:-len('.py')]
-
         self.package_folder = pathlib.Path( all_positional_args[2] )
 
         if self.app_name is None:
-            self.app_name = self.main_program
+            self.app_name = self.main_program[:-len('.py')]
 
         if self.app_install_key != '' and self.app_install_value == '':
             raise AppPackageError( 'require --install-value with --install-key' )
 
-    def build( self, all_module_names ):
+    def buildCommand( self, argv ):
         try:
-            self.info( 'App Packager' )
-            self.parseArgs()
+            self.info( 'App Package Builder' )
+            self.parseArgs( argv )
 
             if self.app_type == self.APP_TYPE_CLI:
                 self.info( 'Building CLI App %s into package folder %s' % (self.app_name, self.package_folder) )
@@ -142,13 +211,53 @@ class AppPackage:
             else:
                 raise AppPackageError( 'Unknown app_type %r' % (self.app_type,) )
 
-            self.debug( 'All module names: %r' % (all_module_names,) )
+
+            #
+            #   Look for modules using two methods
+            #   1. Import the main program and see what ends up in sys.modules
+            #   2. Use modulefinder to locate imports done at runtime
+            #
+
+            # 1. import main program
+            main_module = self.main_program
+            if main_module.endswith( '.py' ):
+                main_module = main_module[:-len('.py')]
+
+            importlib.import_module( main_module )
+
+            # save the list of modules imported
+            all_imported_module_names = list( sys.modules.keys() )
+
+            # 2. what can modulefinder locate
+            mf = modulefinder.ModuleFinder()
+            mf.run_script( self.main_program )
+            for name, mod in sorted( mf.modules.items() ):
+                self.verbose( 'Module %s: %r' % (name, mod) )
+
+            missing, maybe = mf.any_missing_maybe()
+            all_missing = set( missing )
+            all_missing_but_needed = all_missing - self.all_modules_allowed_to_be_missing
+
+            for x in all_missing_but_needed:
+                self.error( 'module %s is missing but is required' % (x,) )
+
+            for x in maybe:
+                self.warning( 'module %s maybe missing' % (x,) )
+
+            if len(all_missing_but_needed) > 0:
+                return 1
 
             # find the python DLL
             self.addWinPeFileDependenciesToPackage( pathlib.Path( sys.executable ) )
 
-            for name in sorted( all_module_names ):
-                self.processModule( name )
+            for name, mod in sorted( mf.modules.items() ):
+                self.processModule( name, mod )
+
+            for name in sorted( all_imported_module_names ):
+                if name in self.all_imported_modules_to_exclude:
+                    continue
+
+                self.processModule( name, sys.modules[ name ] )
 
             if not self.enable_merge:
                 self.cleanAppPackage()
@@ -162,24 +271,20 @@ class AppPackage:
         except AppPackageError as e:
             self.error( str(e) )
 
-    def processModule( self, name ):
+    def processModule( self, name, module ):
         self.verbose( 'Checking module %s' % (name,) )
-        module = sys.modules[ name ]
-        if not hasattr( module, '__file__' ):
+        if not hasattr( module, '__file__' ) or module.__file__ is None:
             self.verbose( '%s is builtin - ignoring' % (name,) )
             return
 
-        if name == '__main__':
-            self.verbose( '%s is app-packager module - ignoring' % (name,) )
-            return
-
-        filename = pathlib.Path( module.__file__ )
+        filename = pathlib.Path( module.__file__ ).resolve()
         self.debug( 'module type %s filename %s' % (filename.suffix, filename) )
 
         # is this file part of the python installation?
         for path in [sys.prefix]+sys.path:
             try:
-                path = pathlib.Path( path ).resolve()
+                path = pathlib.Path( path )
+                path = path.resolve()
 
             except FileNotFoundError:
                 continue
@@ -217,7 +322,7 @@ class AppPackage:
             self.addWinPeFileDependenciesToPackage( filename )
 
     def addWinPeFileDependenciesToPackage( self, filename ):
-        all_dlls = win_app_packager.win_app_package_win_pe_info.getPeImportDlls( self, filename )
+        all_dlls = win_app_package_win_pe_info.getPeImportDlls( self, filename )
         self.verbose( 'Dependancies of DLL %s:' % (filename,) )
         for dll in sorted( all_dlls ):
             self.verbose( '   %s' % (dll,) )
@@ -348,6 +453,11 @@ class AppPackage:
         p = PackageFile( bootstrap_filename, bootstrap_exe )
         p.copy( self.package_folder )
 
+        p = PackageFile(
+                self.win_app_packager_folder / 'run_win_app.py',
+                self.library_folder / 'run_win_app.py' )
+        p.copy( self.package_folder )
+
         if self.enable_bootstrap_debug:
             # include PDB file need to support debugging
             p.copyPdb( self.package_folder )
@@ -367,7 +477,7 @@ class AppPackage:
             sln_file = (self.package_folder / bootstrap_exe ).with_suffix( '.sln' )
             sln_file.write_text( self.vc_14_solution_file_template % sln_vars )
 
-        win_app_packager.win_app_package_exe_config.configureAppExeBootStrap( 
+        win_app_package_exe_config.configureAppExeBootStrap( 
             str( self.package_folder / bootstrap_exe ),
             'python%d%d.dll' % (sys.version_info.major, sys.version_info.minor),
             self.main_program,

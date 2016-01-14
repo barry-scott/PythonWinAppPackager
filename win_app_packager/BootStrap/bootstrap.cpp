@@ -165,11 +165,15 @@ public:
         static const int len = 1024;
         wchar_t boot_script[ len ];
 
-        StringCchCopyW( boot_script, len, L"import runpy;runpy.run_path( '" );
+        //
+        // runpy._run_module_as_main is not public - so expect things to break
+        // is the python devs need to update the API
+        //
+        StringCchCopyW( boot_script, len, L"import run_win_app;run_win_app.run_win_app( '" );
         StringCchCatW( filename, c_pathname_size, m_installation_folder );
         StringCchCatW( filename, c_pathname_size, L"\\" RESOURCE_FOLDER_NAME "\\" );
         StringCchCatW( boot_script, len, m_main_py_module );
-        StringCchCatW( boot_script, len, L".py', run_name='__main__' );" );
+        StringCchCatW( boot_script, len, L"' )" );
 
         char *locale_boot_script = NAME( Py_EncodeLocale )( boot_script, NULL );
         return NAME( PyRun_SimpleString )( locale_boot_script );
@@ -196,7 +200,6 @@ public:
             GetModuleFileName( nullptr, m_installation_folder, c_filename_size );
 
             // dirname
-            
             wchar_t *last_sep = nullptr;
             for( wchar_t *p = m_installation_folder; *p != 0; ++p )
             {
