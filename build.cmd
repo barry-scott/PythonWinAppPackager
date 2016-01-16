@@ -20,4 +20,5 @@ nmake /nologo
 popd
 
 py -%PY_VER% setup.py sdist bdist_wheel %2 %3 %4 %5
+dir/s/b dist\*.whl
 endlocal
