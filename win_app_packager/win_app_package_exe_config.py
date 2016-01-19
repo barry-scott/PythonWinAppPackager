@@ -8,6 +8,41 @@ import ctypes
 import ctypes.wintypes
 
 import struct
+from namedstruct import namedstruct
+
+# format of .ICO file on disk
+struct_IconDirHeader = namedstruct( 'IconDirHeader', '<'
+    'h:idReserved '
+    'h:idType '
+    'h:idCount'
+    )
+struct_IconDirEntry = namedstruct( 'IconDirEntry', '<'
+    'b:bWidth '
+    'b:bHeight '
+    'b:bColorCount '
+    'b:bReserved '
+    'h:wPlanes '
+    'h:wBitCount '
+    'i:dwBytesInRes '
+    'i:dwImageOffset'
+    )
+
+# Resource formats
+struct_GrpIconDir = namedstruct( 'GrpIconDir', '<'
+    'h:idReserved '
+    'h:idType '
+    'h:idCount'
+    )
+struct_GrpIconDirEntry = namedstruct( 'GrpIconDirEntry', '<'
+    'b:bWidth '
+    'b:bHeight '
+    'b:bColorCount '
+    'b:bReserved '
+    'h:wPlanes '
+    'h:wBitCount '
+    'i:dwBytesInRes '
+    'h:nID'
+    )
 
 # ctypes functions
 BeginUpdateResource = ctypes.windll.kernel32.BeginUpdateResourceW
@@ -26,6 +61,9 @@ UpdateResource.argtypes = (ctypes.wintypes.HANDLE
 EndUpdateResource = ctypes.windll.kernel32.EndUpdateResourceW
 EndUpdateResource.argtypes = (ctypes.wintypes.HANDLE
                              ,ctypes.wintypes.BOOL)
+
+RT_ICON =                   3
+RT_GROUP_ICON =             14
 
 RT_STRING =                 6        # STRINGTABLE
 
@@ -61,6 +99,9 @@ def main( argv ):
 
     elif argv[1:2] == ['create']:
         return createResourceIdHeaderFile( argv[2] )
+
+    elif argv[1:2] == ['icon']:
+        return updateIconInExe( argv[3], argv[2] )
 
     else:
         print( 'Usage: %s bootstrap <exefile> <python_dll> <main_py_module> <install_key> <install_value>' % (argv[0],) )
@@ -142,6 +183,60 @@ def updateStringBundleInExe( exe_filename, stringtable_id_name, all_strings ):
     rc = EndUpdateResource( h, False );
     #print( rc, ctypes.FormatError() )
 
+    return 0
+
+def updateIconInExe( exe_filename, icon_filename ):
+    with open( icon_filename, 'rb' ) as f:
+        all_entries = []
+        all_images = []
+
+        header = struct_IconDirHeader.unpack( f.read( len(struct_IconDirHeader) ) )
+
+        for i in range( header.idCount ):
+            all_entries.append(
+                 struct_IconDirEntry.unpack(
+                    f.read( len(struct_IconDirEntry) ) ) )
+
+        for entry in all_entries:
+            f.seek( entry.dwImageOffset, 0 )
+            all_images.append( f.read( entry.dwBytesInRes ) )
+
+    h = BeginUpdateResource( exe_filename, False )
+    #print( h, ctypes.FormatError() )
+
+    grp_header = struct_GrpIconDir.packer()
+    grp_header.idReserved = 0
+    grp_header.idType = header.idType
+    grp_header.idCount = header.idCount
+
+    all_data = [grp_header.pack()]
+    entry_id = 1
+    for entry in all_entries:
+        grp_entry = struct_GrpIconDirEntry.packer()
+        grp_entry.bWidth = entry.bWidth
+        grp_entry.bHeight = entry.bHeight
+        grp_entry.bColorCount = entry.bColorCount
+        grp_entry.bReserved = entry.bReserved
+        grp_entry.wPlanes = entry.wPlanes
+        grp_entry.wBitCount = entry.wBitCount
+        grp_entry.dwBytesInRes = entry.dwBytesInRes
+        grp_entry.nID = entry_id
+        all_data.append( grp_entry.pack() )
+        entry_id += 1
+
+    language = 0
+    data = b''.join( all_data )
+    rc = UpdateResource( h, RT_GROUP_ICON, 1, language, data, len(data) )
+    #print( rc, ctypes.FormatError() )
+
+    entry_id = 1
+    for image in all_images:
+        rc = UpdateResource( h, RT_ICON, entry_id, language, image, len(image) )
+        #print( rc, ctypes.FormatError() )
+        entry_id += 1
+
+    rc = EndUpdateResource( h, False );
+    #print( rc, ctypes.FormatError() )
     return 0
 
 if __name__ == '__main__':

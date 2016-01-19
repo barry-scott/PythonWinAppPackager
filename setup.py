@@ -88,5 +88,5 @@ setuptools.setup(
                         ['BootStrap/obj/bootstrap-cli.exe'
                         ,'BootStrap/obj/bootstrap-gui.exe']},
 
-    install_requires="namedstruct >=1"
+    install_requires="namedstruct >=1.1"
 )

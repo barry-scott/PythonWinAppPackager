@@ -74,6 +74,7 @@ class AppPackage:
 
         self.app_type = self.APP_TYPE_CLI
         self.app_name = None
+        self.app_icon = None
         self.app_install_key = ''
         self.app_install_value = ''
 
@@ -172,6 +173,10 @@ class AppPackage:
 
                 elif arg == '--install-value' and (index+1) < len( argv ):
                     self.app_install_value = sys.argv[index+1]
+                    index += 1
+
+                elif arg == '--icon' and (index+1) < len( argv ):
+                    self.app_icon = sys.argv[index+1]
                     index += 1
 
                 elif arg == '--merge':
@@ -507,6 +512,13 @@ class AppPackage:
             self.app_install_value, 
             )
 
+        if self.app_icon is not None:
+            self.info( 'Settings ICON from %s' % (self.app_icon,) )
+            win_app_package_exe_config.updateIconInExe( 
+                str( self.package_folder / bootstrap_exe ),
+                self.app_icon
+                )
+
     vc_14_solution_file_template = '''Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.23107.0
@@ -515,7 +527,7 @@ Project("{%(UUID1)s}") = "%(name)s", "%(exefile)s", "{%(UUID2)s}"
 	ProjectSection(DebuggerProjectSystem) = preProject
 		PortSupplier = 00000000-0000-0000-0000-000000000000
 		Executable = %(Executable)s
-		RemoteMachine = BLACKSTAR
+		RemoteMachine = localhost
 		StartingDirectory = %(StartingDirectory)s
 		Environment = Default
 		LaunchingEngine = 00000000-0000-0000-0000-000000000000
@@ -536,6 +548,7 @@ Global
 	EndGlobalSection
 EndGlobal
 '''
+
 
 class PackageFile:
     def __init__( self, source_file, package_file ):
