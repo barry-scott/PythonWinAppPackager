@@ -15,15 +15,17 @@ python extensions and the DLLs that depend on.
 The inclusion of the source code allows users to modify the program,
 if they so desire.
 
+win_app_packer support python 3 for both win32 and win64.
+
 Installation
 ------------
 
 ::
 
-py -3.5 -m pip install PythonWinAppPackager
+py -3.5 -m pip install win-app-packager
 
 
 Usage
 -----
 
-app-packager.py <main-script> [<options>...]
+py -3.5 -m win_app_packager
