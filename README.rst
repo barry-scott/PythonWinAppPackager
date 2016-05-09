@@ -15,7 +15,8 @@ python extensions and the DLLs that depend on.
 The inclusion of the source code allows users to modify the program,
 if they so desire.
 
-win_app_packer support python 3 for both win32 and win64.
+win_app_packer supports python 3 for win64 and starting with 1.1.0
+win32.
 
 Installation
 ------------

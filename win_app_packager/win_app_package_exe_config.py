@@ -10,6 +10,8 @@ import ctypes.wintypes
 import struct
 from namedstruct import namedstruct
 
+is_64bit = (ctypes.sizeof( ctypes.c_voidp ) * 8) == 64
+
 # format of .ICO file on disk
 struct_IconDirHeader = namedstruct( 'IconDirHeader', '<'
     'h:idReserved '
@@ -51,12 +53,20 @@ BeginUpdateResource.argtypes = (ctypes.wintypes.LPCWSTR
 BeginUpdateResource.restype = ctypes.wintypes.HANDLE
 
 UpdateResource = ctypes.windll.kernel32.UpdateResourceW
-UpdateResource.argtypes = (ctypes.wintypes.HANDLE
-                          ,ctypes.wintypes.ULARGE_INTEGER
-                          ,ctypes.wintypes.ULARGE_INTEGER
-                          ,ctypes.wintypes.WORD
-                          ,ctypes.wintypes.LPVOID
-                          ,ctypes.wintypes.DWORD)
+if is_64bit:
+    UpdateResource.argtypes = (ctypes.wintypes.HANDLE
+                              ,ctypes.wintypes.ULARGE_INTEGER
+                              ,ctypes.wintypes.ULARGE_INTEGER
+                              ,ctypes.wintypes.WORD
+                              ,ctypes.wintypes.LPVOID
+                              ,ctypes.wintypes.DWORD)
+else:
+    UpdateResource.argtypes = (ctypes.wintypes.HANDLE
+                              ,ctypes.wintypes.DWORD
+                              ,ctypes.wintypes.DWORD
+                              ,ctypes.wintypes.WORD
+                              ,ctypes.wintypes.LPVOID
+                              ,ctypes.wintypes.DWORD)
 
 EndUpdateResource = ctypes.windll.kernel32.EndUpdateResourceW
 EndUpdateResource.argtypes = (ctypes.wintypes.HANDLE

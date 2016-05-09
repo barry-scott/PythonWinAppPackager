@@ -6,14 +6,13 @@ import sys
 import os
 import pathlib
 import uuid
-import ctypes
-import ctypes.wintypes
 import modulefinder
 import importlib
 import encodings
 
 from . import win_app_package_win_pe_info
 from . import win_app_package_exe_config
+from . import win_known_paths 
 
 class AppPackageError(Exception):
     pass
@@ -80,6 +79,14 @@ class AppPackage:
 
         self.main_program = None
         self.package_folder = None
+
+        # need to check for both paths
+        # the cases covered are:
+        # win32 app on windows 32 bit system
+        # win32 app on windows 64 bit system
+        # win64 app on windows 64 bit system
+        self.__windows_system_folders = (pathlib.Path( win_known_paths.get_path( win_known_paths.FOLDERID.System ) )
+                                        ,pathlib.Path( win_known_paths.get_path( win_known_paths.FOLDERID.SystemX86 ) ))
 
         # package contents
         self.__all_library_files = set()
@@ -383,13 +390,12 @@ class AppPackage:
 
         raise AppPackageError( 'Dropped DLL %s' % (dll_path,) )
 
-
     def findDll( self, dll_name, prefered_location ):
         # look for the DLL in an ordered set of locations
         # starting with the 'prefered_location'
         # and then working along the 'PATH'
 
-        for folder in [prefered_location,'']+os.environ['PATH'].split( os.pathsep ):
+        for folder in [prefered_location,'']+[sys.prefix]+os.environ['PATH'].split( os.pathsep ):
             try:
                 folder = pathlib.Path( folder ).resolve()
 
@@ -408,7 +414,7 @@ class AppPackage:
         if dll.match( 'api-ms-win-*.dll' ):
             return True
 
-        if dll.parent == windowsGetSystemDirectory():
+        if dll.parent in self.__windows_system_folders:
             return True
 
         return False
@@ -601,18 +607,3 @@ class PackageFile:
     # make containable
     def __hash__( self ):
         return hash( self.source_file )
-
-def windowsGetSystemDirectory():
-    GetSystemDirectory = ctypes.windll.kernel32.GetSystemDirectoryW
-    GetSystemDirectory.argtypes = (ctypes.wintypes.LPWSTR
-                                  ,ctypes.wintypes.DWORD)
-
-    GetSystemDirectory.restype = ctypes.wintypes.UINT
-
-    size = 1024
-    folder = ctypes.create_unicode_buffer( size )
-
-    rc = GetSystemDirectory( folder, size )
-    assert rc > 0
-
-    return pathlib.Path( folder.value )

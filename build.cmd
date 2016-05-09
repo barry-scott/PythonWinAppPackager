@@ -12,6 +12,7 @@ if "%1" == "32" (
 
 rmdir /s /q build
 rmdir /s /q dist
+rmdir /s /q dist2
 rmdir /s /q PythonWinAppPackager.egg-info
 rmdir /s /q win_app_packager\BootStrap\obj
 
