@@ -41,6 +41,28 @@ class AppPackage:
         'readline',
         'termios',
         'vms_lib',
+
+        # condition import for python2 compat which can be ignored
+        '_perf',
+        'cStringIO',
+        'ordereddict',
+        'sha',
+        'UserDict',
+
+        # git - module can be ignored
+        'git.index.IndexFile',
+        'git.objects.Object',
+        'git.objects.RootModule',
+        'git.refs.RemoteReference',
+        'git.refs.SymbolicReference',
+        'git.refs.TagReference',
+        'git.repo.Repo',
+        'refs.RemoteReference',
+        'refs.SymbolicReference',
+        'refs.TagReference',
+        'smmap.SlidingWindowMapBuffer',
+        'smmap.SlidingWindowMapManager',
+        'smmap.StaticWindowMapManager',
         ] )
 
     all_imported_modules_to_exclude = set( [
@@ -55,7 +77,6 @@ class AppPackage:
         'importlib.machinery',
         'importlib.util',
         'modulefinder',
-        'pathlib',
         'uuid',
         'win_app_packager',
         'win_app_packager.win_app_package_builder',
@@ -205,7 +226,7 @@ class AppPackage:
             raise AppPackageError( 'build expects two args' )
 
         self.main_program = all_positional_args[1]
-        self.package_folder = pathlib.Path( all_positional_args[2] )
+        self.package_folder = pathlib.Path( all_positional_args[2] ).resolve()
 
         if self.app_name is None:
             self.app_name = self.main_program[:-len('.py')]
