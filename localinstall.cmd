@@ -9,6 +9,7 @@ if "%1" == "32" (
 )
 
 for %%i in (dist\*.whl) do set WHEEL=%%~fi
+set PYTHONPATH=
 cd %userprofile%
 py -%PY_VER% -m pip install -U %WHEEL%
 
