@@ -1,11 +1,16 @@
 setlocal
+echo on
+echo 1 %1
+echo 2 %2
+echo 3 %3
+
 if "%1" == "32" (
     set PY_VER=3.5-32
 ) else (
     set PY_VER=3.5
 )
 
-if "%2" == "" (
+if %2 == "" (
     echo provide password as quoted %%2 arg
     goto :eof
 )
