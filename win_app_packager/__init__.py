@@ -19,4 +19,8 @@ def dispatchCommand( argv ):
 
     elif argv[1] == 'flags':
         from . import win_app_package_exe_config
-        win_app_package_exe_config.flagsCommand( argv )
+        return win_app_package_exe_config.flagsCommand( argv )
+
+    else:
+        print( 'Error: Unknown command %r' % (argv[1],) )
+        return 1

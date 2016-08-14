@@ -326,6 +326,7 @@ class AppPackage:
 
         except AppPackageError as e:
             self.error( str(e) )
+            return 1
 
     def processModule( self, name, module ):
         self.verbose( 'Checking module %s' % (name,) )
