@@ -5,8 +5,7 @@ rmdir /s /q dist
 setlocal
 echo Info: Build for 32 bit
 rmdir /s /q build
-rmdir /s /q dist2
-rmdir /s /q PythonWinAppPackager.egg-info
+rmdir /s /q win_app_packager.egg-info
 rmdir /s /q win_app_packager\BootStrap\obj
 
 call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat"
@@ -25,8 +24,7 @@ endlocal
 setlocal
 echo Info: Build for 64 bit
 rmdir /s /q build
-rmdir /s /q dist2
-rmdir /s /q PythonWinAppPackager.egg-info
+rmdir /s /q win_app_packager.egg-info
 rmdir /s /q win_app_packager\BootStrap\obj
 
 call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\amd64\vcvars64.bat"
