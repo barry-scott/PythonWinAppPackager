@@ -18,6 +18,13 @@ if they so desire.
 win_app_packer supports python 3 for win64 and starting with 1.1.0
 win32.
 
+1.2.0 changes the is collected. All files within a package are
+included, not just the referenced include.
+
+This, for example, allows packages like pytz to be packaged with its
+binary zoneinfo files. And it removes the need for the special case
+code for encodings.
+
 Installation
 ------------
 
