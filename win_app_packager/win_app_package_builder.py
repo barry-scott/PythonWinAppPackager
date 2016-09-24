@@ -8,7 +8,6 @@ import pathlib
 import uuid
 import modulefinder
 import importlib
-import encodings
 
 from . import win_app_package_win_pe_info
 from . import win_app_package_exe_config
@@ -25,6 +24,7 @@ class AppPackage:
     library_folder = resource_folder / 'lib'
 
     all_modules_allowed_to_be_missing = set( [
+        'sets',
         '_dummy_threading',
         '_frozen_importlib',
         '_frozen_importlib_external',
@@ -252,9 +252,8 @@ class AppPackage:
             #
             #   Look for modules using two methods
             #   1. Import the main program and see what ends up in sys.modules
-            #   2. Use modulefinder to locate imports done at runtime
-            #   3. Force in all the encodings as they can be referenced
-            #      dynacmically via user input
+            #   2. Force "encodings" to be included
+            #   3. Use modulefinder to locate imports done at runtime
             #
 
             # 1. import main program
@@ -269,7 +268,10 @@ class AppPackage:
             # save the list of modules imported
             all_imported_module_names = list( sys.modules.keys() )
 
-            # 2. what can modulefinder locate
+            # 2. force in encodings
+            importlib.import_module( 'encodings' )
+
+            # 3. what can modulefinder locate
             mf = modulefinder.ModuleFinder()
             mf.run_script( self.main_program )
             for name, mod in sorted( mf.modules.items() ):
@@ -287,21 +289,6 @@ class AppPackage:
 
             if len(all_missing_but_needed) > 0:
                 return 1
-
-            # 3. Include all encodings as these as used via encode( name )/decode( name )
-            # calls that can get name from user input
-            class FakeModule:
-                def __init__( self, filename ):
-                    self.__file__ = str(filename)
-
-            num_encodings = 0
-            encoding_folder = pathlib.Path( encodings.__file__ ).parent
-            for filename in encoding_folder.iterdir():
-                if filename.suffix == '.py':
-                    self.processModule( filename, FakeModule( filename ) )
-                    num_encodings += 1
-
-            self.info( 'Adding %d encodings' % (num_encodings,) )
 
             # find the python DLL
             self.addWinPeFileDependenciesToPackage( pathlib.Path( sys.executable ) )
@@ -354,16 +341,32 @@ class AppPackage:
 
             if filename.match( '*.py' ):
                 self.addPyFileToPackage( filename, library_filename_suffix )
+                if filename.name == '__init__.py':
+                    # assume that all files in the module need including
+                    self.addAllModuleFilesToPackage( filename.parent, library_filename_suffix.parent )
 
             elif( filename.match( '*.pyd' )
             or    filename.match( '*.dll' ) ):
                 self.addWinPeFileToPackage( filename, library_filename_suffix )
+
             else:
                 raise AppPackageError( 'No handler for files of type %s' % (ext,) )
 
             return
 
         raise AppPackageError( 'Dropped file %s' % (filename,) )
+
+    def addAllModuleFilesToPackage( self, module_dirname, library_dirname_suffix ):
+        self.verbose( 'Adding module files to %s from %s' % (library_dirname_suffix, module_dirname) )
+        for filename in module_dirname.iterdir():
+            if filename.suffix in ('.pyc', ',pyo'):
+                continue
+
+            if filename.is_dir():
+                self.addAllModuleFilesToPackage( filename, library_dirname_suffix / filename.name )
+
+            else:
+                self.addPyFileToPackage( filename, library_dirname_suffix / filename.name )
 
     def addPyFileToPackage( self, filename, library_filename_suffix ):
         self.verbose( 'Adding source file %s from %s' % (library_filename_suffix, filename) )
