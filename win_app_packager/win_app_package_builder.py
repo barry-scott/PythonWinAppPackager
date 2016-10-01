@@ -49,6 +49,19 @@ class AppPackage:
         'sha',
         'UserDict',
 
+        # from python2 support for pkg_resources via pytz
+        '_sysconfigdata',
+        'multiprocessing.get_context',
+        'multiprocessing.BufferTooShort',
+        'dummy.Process',
+        'multiprocessing.AuthenticationError',
+        'urlparse',
+        'packaging.specifiers',
+        'multiprocessing.set_start_method',
+        'multiprocessing.TimeoutError',
+        'packaging.version',
+        'multiprocessing.get_start_method',
+
         # git - module can be ignored
         'git.index.IndexFile',
         'git.objects.Object',
@@ -97,6 +110,8 @@ class AppPackage:
         self.app_icon = None
         self.app_install_key = ''
         self.app_install_value = ''
+
+        self.modules_allowed_to_be_missing_filename = None
 
         self.main_program = None
         self.package_folder = None
@@ -150,11 +165,15 @@ class AppPackage:
         build a windows gui program.
     --name
         name the program (defaults to the <main-script> name).
-    --install-key <key>  --install-value <value>
+    --install-key <key>
+    --install-value <value>
         The install path of the package can be read
         from the windows registry from key HKLM:<key> value <value>
         otherwise the install path is assumed to be the same folder
         that the .EXE files is in.
+    --modules-allowed-to-be-missing-file <file-name>
+        Add all the modules listed in the file <file-name> to the allowed
+        to be missing list. Blank lines and lines starting with a '#' as ignored.
     --merge
         Do not clean out the <package-folder> before building the package.
         Useful for putting multiple programs into one package.
@@ -210,6 +229,10 @@ class AppPackage:
                 elif arg == '--merge':
                     self.enable_merge = True
 
+                elif arg == '--modules-allowed-to-be-missing-file' and (index+1) < len( argv ):
+                    self.modules_allowed_to_be_missing_filename = sys.argv[index+1]
+                    index += 1
+
                 else:
                     raise AppPackageError( 'Unknown option %r' % (arg,) )
 
@@ -238,6 +261,8 @@ class AppPackage:
         try:
             self.info( 'App Package Builder' )
             self.parseArgs( argv )
+
+            self.processModulesAllowedToBeMissingFile()
 
             if self.app_type == self.APP_TYPE_CLI:
                 self.info( 'Building CLI App %s into package folder %s' % (self.app_name, self.package_folder) )
@@ -314,6 +339,23 @@ class AppPackage:
         except AppPackageError as e:
             self.error( str(e) )
             return 1
+
+    def processModulesAllowedToBeMissingFile( self ):
+        if self.modules_allowed_to_be_missing_filename is None:
+            return
+
+        try:
+            with open( self.modules_allowed_to_be_missing_filename, 'r', encoding='utf=8' ) as f:
+                for line in f:
+                    line = line.strip()
+                    if line == '' or line.startswith( '#' ):
+                        continue
+
+                    self.verbose( 'Adding module "%s" to the allowed to be missing modules list' )
+                    self.all_modules_allowed_to_be_missing.add( line )
+
+        except FileNotFoundError as e:
+            raise AppPackageError( str(e) )
 
     def processModule( self, name, module ):
         self.verbose( 'Checking module %s' % (name,) )
