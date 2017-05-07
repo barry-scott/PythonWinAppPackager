@@ -11,7 +11,17 @@ import distutils.dist
 import codecs
 import os.path
 
+url = 'https://github.com/barry-scott/PythonWinAppPackager'
+
 here = os.path.abspath(os.path.dirname(__file__))
+
+try:
+    version = open('version.txt').read().strip()
+
+except FileNotFoundError:
+    print( 'This kit cannot be installed for this version of python' )
+    print( 'Request support from your version of python 3 from %s' % (url,) )
+    sys.exit( 1 )
 
 # Get the long description from the README file
 with codecs.open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
@@ -39,13 +49,13 @@ setuptools.setup(
     # force tag to include win32/win64 marker
     distclass=DistributionAppPackager, libraries = [],
 
-    version=open('version.txt').read().strip(),
+    version=version,
 
     description='Python Win App Packager',
     long_description=long_description,
 
     # The project's main homepage.
-    url='https://github.com/barry-scott/PythonWinAppPackager',
+    url=url,
 
     # Author details
     author='Barry Scott',

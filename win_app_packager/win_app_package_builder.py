@@ -469,6 +469,9 @@ class AppPackage:
             except FileNotFoundError:
                 continue
 
+            except PermissionError:
+                continue
+
             dll_path = folder / dll_name
             if dll_path.exists():
                 return dll_path

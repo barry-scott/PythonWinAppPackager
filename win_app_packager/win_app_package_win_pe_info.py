@@ -223,7 +223,7 @@ def getPeImportDlls( log, filename ):
                 offset = addr - section.VirtualAddress
                 return section.PointerToRawData + offset
 
-        raise ValueError( 'RVA 0x%8.8x is not within any COFF section' )
+        raise ValueError( 'RVA 0x%8.8x is not within any COFF section in file %s' % (addr, filename) )
 
     end = section_0_start + coff_header.NumberOfSections * len(struct_coff_section)
 
@@ -232,6 +232,10 @@ def getPeImportDlls( log, filename ):
     import_data_dir = all_data_dir[ IMAGE_DIRECTORY_ENTRY_IMPORT ]
     log.debug( 'import_data_dir %r' % (import_data_dir,) )
     import_data_dir.dump( log.debug )
+
+    if import_data_dir.Size == 0:
+        log.debug( 'Empty import list' )
+        return set()
 
     start_import_data_dir = rvaToDisk( import_data_dir.VirtualAddress )
 
@@ -280,4 +284,4 @@ if __name__ == '__main__':
         def error( self, m ):
             print( 'Error: %s' % (m,) )
 
-    print( getPeImportDlls( log(), r'c:\Python35.win64\python.exe' ) )
+    print( getPeImportDlls( log(), pathlib.Path( r'C:\python36.win64\python3.dll' ) ) )

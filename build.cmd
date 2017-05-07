@@ -1,6 +1,12 @@
 setlocal
-rmdir /s /q dist
+if "%1" == "" (
+    echo "Usage: %0 version"
+    echo "       %0 3.6"
+    goto :eof
+)
+set BUILD_VER=%1
 
+rmdir /s /q dist
 
 setlocal
 echo Info: Build for 32 bit
@@ -10,7 +16,7 @@ rmdir /s /q win_app_packager\BootStrap\obj
 
 call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat"
     if errorlevel 1 goto :error
-set PY_VER=3.5-32
+set PY_VER=%BUILD_VER%-32
 
 pushd win_app_packager\BootStrap
 nmake /nologo
@@ -29,7 +35,7 @@ rmdir /s /q win_app_packager\BootStrap\obj
 
 call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\amd64\vcvars64.bat"
     if errorlevel 1 goto :error
-set PY_VER=3.5
+set PY_VER=%BUILD_VER%
 
 pushd win_app_packager\BootStrap
 nmake /nologo

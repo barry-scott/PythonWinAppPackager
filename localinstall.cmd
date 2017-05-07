@@ -1,14 +1,11 @@
 setlocal
-if "%1" == "32" (
-    set PY_VER=3.5-32
-) else if "%1" == "64" (
-    set PY_VER=3.5
-) else if "%1" == "" (
-    set PY_VER=3.5
-) else (
-    echo Error: %%1 must be 32 or 64
+if "%1" == "" (
+    echo "Usage: %0 <version>"
+    echo "       %0 3.6-32"
     goto :eof
 )
+
+set PY_VER=%1
 
 for %%i in (dist\*.whl) do set WHEEL=%%~fi
 set PYTHONPATH=
