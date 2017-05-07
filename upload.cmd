@@ -1,6 +1,6 @@
 setlocal
 set PY_VER=3.5
-if %1 == "" (
+if X%1 == X (
     echo provide password as quoted %%1 arg
     goto :eof
 )
