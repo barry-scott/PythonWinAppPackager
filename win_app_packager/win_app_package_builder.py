@@ -351,7 +351,7 @@ class AppPackage:
                     if line == '' or line.startswith( '#' ):
                         continue
 
-                    self.verbose( 'Adding module "%s" to the allowed to be missing modules list' )
+                    self.verbose( 'Adding module "%s" to the allowed to be missing modules list' % (line,) )
                     self.all_modules_allowed_to_be_missing.add( line )
 
         except FileNotFoundError as e:
@@ -485,6 +485,9 @@ class AppPackage:
             return True
 
         if dll.parent in self.__windows_system_folders:
+            return True
+
+        if dll.name == 'dbghelp.dll':
             return True
 
         return False
