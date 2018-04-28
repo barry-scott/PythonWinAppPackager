@@ -31,15 +31,18 @@ a new release of win-app-packager. Typcially packages that support
 both python 2  and python 3 will reference python 2 modules that
 can be ignored.
 
+1.2.4 fixed an issue with dbghelp.dll that is not required for the
+app package being reported as required.
+
 Installation
 ------------
 
 ::
 
-py -3.5 -m pip install win-app-packager
+py -3.6 -m pip install win-app-packager
 
 
 Usage
 -----
 
-py -3.5 -m win_app_packager
+py -3.6 -m win_app_packager
