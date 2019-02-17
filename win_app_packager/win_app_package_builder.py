@@ -11,7 +11,7 @@ import importlib
 
 from . import win_app_package_win_pe_info
 from . import win_app_package_exe_config
-from . import win_known_paths 
+from . import win_known_paths
 
 class AppPackageError(Exception):
     pass
@@ -182,7 +182,7 @@ class AppPackage:
     --debug
         Developer option. Output lots of details about the build process.
     --bootstrap-debug
-        Developer option. Copy PDF files and setup a Microsoft Visual 
+        Developer option. Copy PDF files and setup a Microsoft Visual
         Studio solution (.sln) file suitable for running the bootstrap
         under the debugger.
 '''
@@ -583,17 +583,17 @@ class AppPackage:
             sln_file = (self.package_folder / bootstrap_exe ).with_suffix( '.sln' )
             sln_file.write_text( self.vc_14_solution_file_template % sln_vars )
 
-        win_app_package_exe_config.configureAppExeBootStrap( 
+        win_app_package_exe_config.configureAppExeBootStrap(
             str( self.package_folder / bootstrap_exe ),
             'python%d%d.dll' % (sys.version_info.major, sys.version_info.minor),
             self.main_program,
-            self.app_install_key, 
-            self.app_install_value, 
+            self.app_install_key,
+            self.app_install_value,
             )
 
         if self.app_icon is not None:
             self.info( 'Settings ICON from %s' % (self.app_icon,) )
-            win_app_package_exe_config.updateIconInExe( 
+            win_app_package_exe_config.updateIconInExe(
                 str( self.package_folder / bootstrap_exe ),
                 self.app_icon
                 )
