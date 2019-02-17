@@ -34,6 +34,8 @@ that can be ignored.
 1.2.4 fixed an issue with dbghelp.dll that is not required for the
 app package being reported as required.
 
+1.2.5 updated for python 3.7 and improve build scripts
+
 Installation
 ------------
 

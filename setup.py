@@ -11,24 +11,17 @@ import distutils.dist
 import codecs
 import os.path
 
+version = '1.2.5'
+
 url = 'https://github.com/barry-scott/PythonWinAppPackager'
 
 here = os.path.abspath(os.path.dirname(__file__))
-
-try:
-    version = open('version.txt').read().strip()
-
-except FileNotFoundError:
-    print( 'This kit cannot be installed for this version of python' )
-    print( 'Request support from your version of python 3 from %s' % (url,) )
-    sys.exit( 1 )
 
 # Get the long description from the README file
 with codecs.open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 def getDevStatusFromVersion():
-    version = open('version.txt').read().strip()
     if 'a' in version:
         return 'Development Status :: 3 - Alpha'
 
