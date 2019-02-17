@@ -26,10 +26,10 @@ binary zoneinfo files. And it removes the need for the special case
 code for encodings.
 
 1.2.2 add the --modules-allowed-to-be-missing-file to allow the new
-module names to be added to the allowed to be missing list with requiring
-a new release of win-app-packager. Typcially packages that support
-both python 2  and python 3 will reference python 2 modules that
-can be ignored.
+module names to be added to the allowed to be missing list without
+requiring a new release of win-app-packager. Typcially packages that
+support both python 2  and python 3 will reference python 2 modules
+that can be ignored.
 
 1.2.4 fixed an issue with dbghelp.dll that is not required for the
 app package being reported as required.

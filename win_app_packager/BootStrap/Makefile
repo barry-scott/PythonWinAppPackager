@@ -28,8 +28,8 @@ CLI_FLAGS=$(COMMON_FLAGS) $(COMMON_DEFINES) /D "_CONSOLE" $(EXTRA_FLAGS)
 GUI_FLAGS=$(COMMON_FLAGS) $(COMMON_DEFINES) /D "_WINDOWS" $(EXTRA_FLAGS)
 
 LDEXE=$(CCC) /Zi /MT /EHsc
-CLI_LIBS=User32.lib
-GUI_LIBS=User32.lib
+CLI_LIBS=User32.lib Advapi32.lib
+GUI_LIBS=User32.lib Advapi32.lib
 
 all: obj obj\bootstrap-gui.exe obj\bootstrap-cli.exe
 
