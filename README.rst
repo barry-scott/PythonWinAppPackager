@@ -41,10 +41,12 @@ Installation
 
 ::
 
-py -3.6 -m pip install win-app-packager
+  py -3 -m pip install win-app-packager
 
 
 Usage
 -----
 
-py -3.6 -m win_app_packager
+::
+
+  py -3 -m win_app_packager

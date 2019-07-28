@@ -41,8 +41,15 @@ nmake /nologo
     if errorlevel 1 goto :error
 popd >NUL
 
+py -%PY_VER% -m pip install --user --no-warn-script-location --upgrade -r requirements.txt
+
 py -%PY_VER% setup.py sdist bdist_wheel %3 %4 %5 %6
     if errorlevel 1 goto :error
+
+dir /s /b dist\*.whl
+py -%PY_VER% -m twine check dist\*
+    if errorlevel 1 goto :error
+
 endlocal
 )
 goto :final_actions
@@ -72,9 +79,15 @@ nmake /nologo
     if errorlevel 1 goto :error
 popd >NUL
 
+py -%PY_VER% -m pip install --no-warn-script-location --user --upgrade -r requirements.txt
+
 py -%PY_VER% setup.py sdist bdist_wheel %3 %4 %5 %6
     if errorlevel 1 goto :error
+
 dir /s /b dist\*.whl
+py -%PY_VER% -m twine check dist\*
+    if errorlevel 1 goto :error
+
 endlocal
 goto :final_actions
 

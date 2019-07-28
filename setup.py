@@ -7,8 +7,6 @@ setup.py for PythonWinAppPackager
 import setuptools
 import distutils.dist
 
-# To use a consistent encoding
-import codecs
 import os.path
 
 version = '1.2.5'
@@ -18,7 +16,7 @@ url = 'https://github.com/barry-scott/PythonWinAppPackager'
 here = os.path.abspath(os.path.dirname(__file__))
 
 # Get the long description from the README file
-with codecs.open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
+with open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 def getDevStatusFromVersion():
@@ -46,6 +44,7 @@ setuptools.setup(
 
     description='Python Win App Packager',
     long_description=long_description,
+    long_description_content_type='text/x-rst',
 
     # The project's main homepage.
     url=url,

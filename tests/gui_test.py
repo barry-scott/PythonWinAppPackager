@@ -9,10 +9,12 @@ class HelloWindow(QMainWindow):
     def __init__( self ):
         super().__init__()
 
-        self.setMinimumSize( QSize(100, 50) )
-        self.setWindowTitle( 'GUI test' )
+        py_ver = '%d.%d' % (sys.version_info.major, sys.version_info.minor)
 
-        self.setCentralWidget( QLabel( ' GUI test ' , self ) )
+        self.setMinimumSize( QSize(350, 100) )
+        self.setWindowTitle( 'GUI test - python %s' % (py_ver,) )
+
+        self.setCentralWidget( QLabel( ' GUI test - python %s ' % (py_ver,), self ) )
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication( sys.argv )
