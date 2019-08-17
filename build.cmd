@@ -14,15 +14,16 @@ set BUILD_VER=%1
 set BUILD_ARCH=%2
 set PY_VER=%BUILD_VER%-%BUILD_ARCH%
 
+colour-print "<>info Info:<> Clean out old builds"
 if exist dist rmdir /s /q dist
+if exist build rmdir /s /q build
+if exist win_app_packager.egg-info rmdir /s /q win_app_packager.egg-info
+if exist win_app_packager\BootStrap\obj rmdir /s /q win_app_packager\BootStrap\obj
 
 goto build_%BUILD_ARCH%
 :build_32
 setlocal
 colour-print "<>info Info:<> Build Python <>em %%s<> for 32 bit" "%PY_VER%"
-if exist build rmdir /s /q build
-if exist win_app_packager.egg-info rmdir /s /q win_app_packager.egg-info
-if exist win_app_packager\BootStrap\obj rmdir /s /q win_app_packager\BootStrap\obj
 
 if exist "c:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" (
     colour-print "<>em Found compiler VC 2017<>"
@@ -59,10 +60,6 @@ goto :final_actions
 :build_64
 setlocal
 colour-print "<>info Info:<> Build Python <>em %%s<> for 64 bit" "%PY_VER%"
-
-if exist build rmdir /s /q build
-if exist win_app_packager.egg-info rmdir /s /q win_app_packager.egg-info
-if exist win_app_packager\BootStrap\obj rmdir /s /q win_app_packager\BootStrap\obj
 
 if exist "c:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" (
     colour-print "<>em Found compiler VC 2017<>"
