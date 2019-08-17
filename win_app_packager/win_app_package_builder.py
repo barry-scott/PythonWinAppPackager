@@ -108,6 +108,7 @@ class AppPackage:
         self.app_type = self.APP_TYPE_CLI
         self.app_name = None
         self.app_icon = None
+        self.app_version = '0.0.0.0'
         self.app_install_key = ''
         self.app_install_value = ''
 
@@ -191,9 +192,10 @@ class AppPackage:
 
     def parseArgs( self, argv ):
         all_positional_args = []
-        index = 1
-        while index < len( argv ):
-            arg = argv[index]
+        args = iter( argv )
+        next(args)
+
+        for arg in args:
             if arg.startswith( '--' ):
                 if arg == '--debug':
                     self.enable_debug = True
@@ -210,36 +212,32 @@ class AppPackage:
                 elif arg == '--gui':
                     self.app_type = self.APP_TYPE_GUI
 
-                elif arg == '--name' and (index+1) < len( argv ):
-                    self.app_name = argv[index+1]
-                    index += 1
+                elif arg == '--name':
+                    self.app_name = next(args)
 
-                elif arg == '--install-key' and (index+1) < len( argv ):
-                    self.app_install_key = sys.argv[index+1]
-                    index += 1
+                elif arg == '--install-key':
+                    self.app_install_key = next(args)
 
-                elif arg == '--install-value' and (index+1) < len( argv ):
-                    self.app_install_value = sys.argv[index+1]
-                    index += 1
+                elif arg == '--install-value':
+                    self.app_install_value = next(args)
 
-                elif arg == '--icon' and (index+1) < len( argv ):
-                    self.app_icon = sys.argv[index+1]
-                    index += 1
+                elif arg == '--icon':
+                    self.app_icon = next(args)
+
+                elif arg == '--version':
+                    self.app_version = next(args)
 
                 elif arg == '--merge':
                     self.enable_merge = True
 
-                elif arg == '--modules-allowed-to-be-missing-file' and (index+1) < len( argv ):
-                    self.modules_allowed_to_be_missing_filename = sys.argv[index+1]
-                    index += 1
+                elif arg == '--modules-allowed-to-be-missing-file':
+                    self.modules_allowed_to_be_missing_filename = next(args)
 
                 else:
                     raise AppPackageError( 'Unknown option %r' % (arg,) )
 
             else:
                 all_positional_args.append( arg )
-
-            index += 1
 
         if( len( all_positional_args ) < 1
         or all_positional_args[0] != 'build' ):
@@ -597,6 +595,15 @@ class AppPackage:
                 str( self.package_folder / bootstrap_exe ),
                 self.app_icon
                 )
+
+        all_changes = ['FileDescription', self.app_name
+                      ,'ProductName', self.app_name
+                      ,'OriginalFilename', str(bootstrap_exe)
+                      ,'version', self.app_version]
+        win_app_package_exe_config.setVersionInfoInExe(
+            str( self.package_folder / bootstrap_exe ),
+            all_changes
+            )
 
     vc_14_solution_file_template = '''Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14

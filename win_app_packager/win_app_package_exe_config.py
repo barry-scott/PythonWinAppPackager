@@ -105,7 +105,7 @@ struct_StringFileInfo = namedstruct( 'StringFileInfo', '<'
     'h:wLength '
     'h:wValueLength '
     'h:wType '
-    '15h:szKey '      # "StringFileInfo". 
+    '15h:szKey '      # "StringFileInfo".
     )
 
 # VarFileInfo
@@ -113,7 +113,7 @@ struct_VarFileInfo = namedstruct( 'VarFileInfo', '<'
     'h:wLength '
     'h:wValueLength '
     'h:wType '
-    '12h:szKey '      # "VarFileInfo". 
+    '12h:szKey '      # "VarFileInfo".
     'h:padding'
     )
 
@@ -121,7 +121,7 @@ struct_Var = namedstruct( 'Var', '<'
     'h:wLength '
     'h:wValueLength '
     'h:wType '
-    '11h:szKey '      # "Translation". 
+    '11h:szKey '      # "Translation".
     'h:Padding '
     # list of VarValue
     )
@@ -184,6 +184,9 @@ LoadLibraryEx.argtypes =    (ctypes.wintypes.LPCWSTR
 LoadLibraryEx.restype =     ctypes.wintypes.HANDLE
 
 LOAD_LIBRARY_AS_DATAFILE_EXCLUSIVE = 0x00000040
+
+FreeLibrary = ctypes.windll.kernel32.FreeLibrary
+FreeLibrary.argtypes = (ctypes.wintypes.HANDLE,)
 
 FindResource = ctypes.windll.kernel32.FindResourceW
 FindResource.argtypes =     (ctypes.wintypes.HANDLE
@@ -248,6 +251,9 @@ def main( argv ):
 
     elif argv[1:2] == ['show-version-info']:
         return showVersionInfoInExe( argv[2] )
+
+    elif argv[1:2] == ['set-version-info']:
+        return setVersionInfoInExe( argv[2], argv[3:] )
 
     else:
         print( 'Usage: %s bootstrap <exefile> <python_dll> <main_py_module> <install_key> <install_value>' % (argv[0],) )
@@ -387,135 +393,294 @@ def updateIconInExe( exe_filename, icon_filename ):
     return 0
 
 def dprint( msg ):
-    #print( msg )
+    #print( '|', msg )
     pass
 
 def showVersionInfoInExe( exe_filename ):
-    hmodule = LoadLibraryEx( exe_filename, None, LOAD_LIBRARY_AS_DATAFILE_EXCLUSIVE )
-    dprint( 'hmodule 0x%x' % (hmodule,) )
+    vir = VersionInfoResource( exe_filename )
 
-    hrsrc = FindResource( hmodule, 1, RT_VERSION )
-    dprint( '  hrsrc 0x%x' % (hrsrc,) )
+    print( '     dwStrucVersion: %d.%d' % (vir.fixed.dwStrucVersion0, vir.fixed.dwStrucVersion1) )
+    print( '        FileVersion: %d.%d.%d.%d' % (vir.fixed.dwFileVersion0, vir.fixed.dwFileVersion1, vir.fixed.dwFileVersion2, vir.fixed.dwFileVersion3) )
+    print( '     ProductVersion: %d.%d.%d.%d' % (vir.fixed.dwProductVersion0, vir.fixed.dwProductVersion1, vir.fixed.dwProductVersion2, vir.fixed.dwProductVersion3) )
 
-    hglobal = LoadResource( hmodule, hrsrc )
-    dprint( 'hglobal 0x%x' % (hglobal,) )
+    print( '           encoding: %s' % (vir.encoding,) )
+    for key in sorted( vir.all_properties ):
+        print( ' %18s: "%s"' % (key, vir.all_properties[ key ]) )
 
-    res_size = SizeofResource( hmodule, hrsrc )
-    dprint( 'res_size %d' % (res_size,) )
+    print( '  translation value: 0x%8.8x' % (vir.translation.value,) )
 
-    data_p = LockResource( hglobal )
-    dprint( ' data_p 0x%x' % (data_p,) )
+def setVersionInfoInExe( exe_filename, argv ):
+    vir = VersionInfoResource( exe_filename )
 
-    buf = ctypes.create_string_buffer( res_size )
-    ctypes.memmove( buf, data_p, res_size )
-    data = buf.raw
+    args = iter(argv)
 
-    offset = 0
-    size = len(struct_VersionInfoHeader)
-    assert offset%4 == 0
-    header = struct_VersionInfoHeader.unpack( data[offset:offset+size] )
-    header.dump( dprint )
+    for name in args:
+        value = next(args)
 
-    offset += size
-    size = len(struct_VersionInfoFixedFileInfo)
-    assert offset%4 == 0
-    fixed = struct_VersionInfoFixedFileInfo.unpack( data[offset:offset+size] )
-    fixed.dump( dprint )
+        if name.lower() == 'version':
+            vir.setVersion( value )
 
-    print( 'dwStrucVersion: %d.%d' % (fixed.dwStrucVersion0, fixed.dwStrucVersion1) )
-    print( '   FileVersion: %d.%d.%d.%d' % (fixed.dwFileVersion0, fixed.dwFileVersion1, fixed.dwFileVersion2, fixed.dwFileVersion3) )
-    print( 'ProductVersion: %d.%d.%d.%d' % (fixed.dwProductVersion0, fixed.dwProductVersion1, fixed.dwProductVersion2, fixed.dwProductVersion3) )
+        else:
+            vir.setProperty( name, value )
 
-    assert offset%4 == 0
+    vir.updateWithChanges()
 
-    offset += size
-    size = len(struct_ChildOfVersionInfoHeader)
-    assert offset%4 == 0
-    child = struct_ChildOfVersionInfoHeader.unpack( data[offset:offset+size] )
-    child.dump( dprint )
+class VersionInfoResource:
+    def __init__( self, exe_filename ):
+        self.exe_filename = exe_filename
+        self.__loadVersionInfo()
 
-    if child.wType == 1:
-        size = len(struct_StringFileInfo)
-        assert offset%4 == 0
-        string_file_info = struct_StringFileInfo.unpack( data[offset:offset+size] )
-        string_file_info.dump( dprint )
+        self.pack_header = struct_VersionInfoHeader.packer( self.header )
+        self.pack_fixed = struct_VersionInfoFixedFileInfo.packer( self.fixed )
+        self.pack_child = struct_ChildOfVersionInfoHeader.packer( self.child )
+        self.pack_string_file_info = struct_StringFileInfo.packer( self.string_file_info )
 
-        end = offset + string_file_info.wLength
+    def setProperty( self, name, value ):
+        self.all_properties[ name ] = value
 
-        offset += size
-        assert offset%4 == 0
+    def setVersion( self, str_version ):
+        int_version = tuple( int(n) for n in str_version.split('.') )
+        assert len(int_version) == 4, 'bad version %r' % (str_version,)
 
-        size = len(struct_StringHeader)
-        assert offset%4 == 0
-        string_header = struct_StringHeader.unpack( data[offset:offset+size] )
-        string_header.dump( dprint )
+        self.all_properties[ 'ProductVersion' ] = str_version
+        self.pack_fixed.dwProductVersion0 = int_version[0]
+        self.pack_fixed.dwProductVersion1 = int_version[1]
+        self.pack_fixed.dwProductVersion2 = int_version[2]
+        self.pack_fixed.dwProductVersion3 = int_version[3]
 
-        offset += size
-        offset, encoding = extractSzChar( data, offset )
-        print( 'encoding: %s' % (encoding,) )
+        self.all_properties[ 'FileVersion' ] = str_version
+        self.pack_fixed.dwFileVersion0 = int_version[0]
+        self.pack_fixed.dwFileVersion1 = int_version[1]
+        self.pack_fixed.dwFileVersion2 = int_version[2]
+        self.pack_fixed.dwFileVersion3 = int_version[3]
 
-        while offset < end:
+    def updateWithChanges( self ):
+        version_resource = self.__encodeVersionInfo()
+        self.__decodeVersionInfo( version_resource )
+
+        h = BeginUpdateResource( self.exe_filename, False )
+        dprint( 'BeginUpdateResource() -> 0x%x - %s' % (h, ctypes.FormatError()) )
+
+        language = 0
+        version_id = 1
+        rc = UpdateResource( h, RT_VERSION, version_id, language, version_resource, len(version_resource) )
+        dprint( 'UpdateResource() -> 0x%x - %s' % (rc, ctypes.FormatError()) )
+
+        rc = EndUpdateResource( h, False );
+        dprint( 'EndUpdateResource() => 0x%x' % (rc,) )
+
+        return 0
+
+    def __encodeVersionInfo( self ):
+        # pack in reverse order so that sizes are available
+
+        # the tail is copied as is
+
+        # string properties block
+        all_string_properties = []
+
+        for name, value in self.all_properties.items():
+            sz_name = packSzChar( name )
+            if value == '':
+                sz_value = b''
+
+            else:
+                sz_value = packSzChar( value )
+
+            offset = len(struct_StringHeader) + len(sz_name)
+
+            dprint( 'zzz name %r value %r offset %d' % (name, value, offset) )
+
             if offset%4 != 0:
                 offset += 2
+                sz_name += b'\0\0'
+
+            offset += len(sz_value)
+
+            string_header = struct_StringHeader.packer()
+            string_header.wLength = offset # qaq
+            string_header.wValueLength = len(sz_value)//2
+            string_header.wType = 1
+
+            dprint( 'zzz name %r value %r size %d' % (name, value, offset) )
+
+            if offset%4 != 0:
+                offset += 2
+                sz_value += b'\0\0'
+
+            buf_property = string_header.pack() + sz_name + sz_value
+            all_string_properties.append( buf_property )
+
+        buf_all_string_properties = b''.join( all_string_properties )
+
+        # Prefix with an encoding stringheader
+        buf_sz_encoding = packSzChar( self.encoding )
+        encoding_header = struct_StringHeader.packer()
+        encoding_header.wLength = len(encoding_header) + len(buf_all_string_properties) + len(buf_sz_encoding)
+        encoding_header.wValueLength = 0
+        encoding_header.wType = 1
+
+        buf_properties = encoding_header.pack() + buf_sz_encoding + buf_all_string_properties
+
+        self.pack_string_file_info.wLength = len(self.pack_string_file_info) + len(buf_properties)
+        buf_string_properties = self.pack_string_file_info.pack() + buf_properties
+
+        buf_fixed = self.pack_fixed.pack()
+
+        buf_version_info = buf_fixed + buf_string_properties + self.packed_tail
+
+        # VersionInfoHeader
+        header = struct_VersionInfoHeader.packer( self.header )
+        header.wLength = len(header) + len(buf_version_info)
+        buf_header = header.pack()
+
+        version_resource = buf_header + buf_version_info
+        return version_resource
+
+    def __loadVersionInfo( self ):
+        hmodule = LoadLibraryEx( self.exe_filename, None, LOAD_LIBRARY_AS_DATAFILE_EXCLUSIVE )
+        dprint( 'hmodule 0x%x' % (hmodule,) )
+
+        hrsrc = FindResource( hmodule, 1, RT_VERSION )
+        dprint( '  hrsrc 0x%x' % (hrsrc,) )
+
+        hglobal = LoadResource( hmodule, hrsrc )
+        dprint( 'hglobal 0x%x' % (hglobal,) )
+
+        self.res_size = SizeofResource( hmodule, hrsrc )
+        dprint( 'res_size %d' % (self.res_size,) )
+
+        data_p = LockResource( hglobal )
+        dprint( ' data_p 0x%x' % (data_p,) )
+
+        buf = ctypes.create_string_buffer( self.res_size )
+        ctypes.memmove( buf, data_p, self.res_size )
+        data = buf.raw
+
+        # Free handle
+        rc = FreeLibrary( hmodule )
+        assert rc, 'RC 0x%x' % (rc,)
+
+        self.__decodeVersionInfo( data )
+
+    def __decodeVersionInfo( self, data ):
+        dprint( 'VersionInfoResource.__decodeVersionInfo()' )
+        hexDump( data, dprint )
+
+        offset = 0
+        size = len(struct_VersionInfoHeader)
+        assert offset%4 == 0
+        self.header = struct_VersionInfoHeader.unpack( data[offset:offset+size] )
+        self.header.dump( dprint, 'at offset 0x%x' % (offset,) )
+
+        offset += size
+        size = len(struct_VersionInfoFixedFileInfo)
+        assert offset%4 == 0
+        self.fixed = struct_VersionInfoFixedFileInfo.unpack( data[offset:offset+size] )
+        self.fixed.dump( dprint, 'at offset 0x%x' % (offset,) )
+
+        assert offset%4 == 0
+
+        offset += size
+        size = len(struct_ChildOfVersionInfoHeader)
+        assert offset%4 == 0
+        self.child = struct_ChildOfVersionInfoHeader.unpack( data[offset:offset+size] )
+        self.child.dump( dprint, 'at offset 0x%x' % (offset,) )
+
+        self.all_properties = {}
+
+        if self.child.wType == 1:
+            size = len(struct_StringFileInfo)
+            assert offset%4 == 0
+            self.string_file_info = struct_StringFileInfo.unpack( data[offset:offset+size] )
+            self.string_file_info.dump( dprint, 'at offset 0x%x' % (offset,) )
+            dprint( 'szKey %d "%s"' % extractSzChar( data, offset+6 ) )
+
+            end = offset + self.string_file_info.wLength
+
+            offset += size
+            assert offset%4 == 0
 
             size = len(struct_StringHeader)
             assert offset%4 == 0
-            string_header = struct_StringHeader.unpack( data[offset:offset+size] )
-            string_header.dump( dprint )
+            string_encoding_header = struct_StringHeader.unpack( data[offset:offset+size] )
+            dprint( 'qqq' )
+            string_encoding_header.dump( dprint, 'at offset 0x%x' % (offset,) )
 
             offset += size
-            offset, s = extractSzChar( data, offset )
-            print( '%d:  name: %r' % (offset, s) )
-            if offset%4 != 0:
-                offset += 2
+            offset, self.encoding = extractSzChar( data, offset )
 
-            offset, s = extractSzChar( data, offset )
-            print( '%d: value: %r' % (offset, s) )
+            while offset < end:
+                if offset%4 != 0:
+                    offset += 2
 
-        dprint( 'At end: end=%d offset=%d' % (end, offset) )
+                size = len(struct_StringHeader)
+                assert offset%4 == 0
+                string_header = struct_StringHeader.unpack( data[offset:offset+size] )
+                string_header.dump( dprint, 'at offset 0x%x' % (offset,) )
 
-        if offset%4 != 0:
-            offset += 2
-
-        if offset < len(data):
-            size = len(struct_ChildOfVersionInfoHeader)
-            assert offset%4 == 0
-            child = struct_ChildOfVersionInfoHeader.unpack( data[offset:offset+size] )
-            child.dump( dprint )
-
-    if( offset < len(data)
-    and child.wType == 1 ):
-        size = len(struct_VarFileInfo)
-        assert offset%4 == 0
-        var_file_info = struct_VarFileInfo.unpack( data[offset:offset+size] )
-        var_file_info.dump( dprint )
-
-        end = offset + var_file_info.wLength
-
-        offset += size
-        assert offset%4 == 0
-
-        while offset < end:
-            if offset%4 != 0:
-                offset += 2
-
-            size = len(struct_Var)
-            assert offset%4 == 0
-            var = struct_Var.unpack( data[offset:offset+size] )
-            var.dump( dprint )
-
-            var_end = offset + var.wLength
-            offset += size
-            if offset % 4 != 0:
-                offset += 2
-
-            while offset < var_end:
-                size = len(struct_VarValue)
-                var_value = struct_VarValue.unpack( data[offset:offset+size] )
-                print( 'Var value: 0x%8.8x' % (var_value.value,) )
                 offset += size
+                offset, key = extractSzChar( data, offset )
+                if offset%4 != 0:
+                    offset += 2
 
-def hexDump( buffer ):
+                if string_header.wValueLength == 0:
+                    # There is not a string to extract
+                    value = ''
+
+                else:
+                    offset, value = extractSzChar( data, offset )
+
+                self.all_properties[ key ] = value
+                dprint( 'key %d:%r value %d:%r' % (len(key), key, len(value), value) )
+
+            dprint( 'At end: end=%d offset=%d' % (end, offset) )
+
+            if offset%4 != 0:
+                offset += 2
+
+            if offset < len(data):
+                size = len(struct_ChildOfVersionInfoHeader)
+                assert offset%4 == 0
+                child = struct_ChildOfVersionInfoHeader.unpack( data[offset:offset+size] )
+                child.dump( dprint, 'at offset 0x%x' % (offset,) )
+
+        # the tail bytes stay as is when updating the version resource
+        self.packed_tail = data[offset:]
+
+        if( offset < len(data)
+        and child.wType == 1 ):
+            size = len(struct_VarFileInfo)
+            assert offset%4 == 0
+            var_file_info = struct_VarFileInfo.unpack( data[offset:offset+size] )
+            var_file_info.dump( dprint, 'at offset 0x%x' % (offset,) )
+
+            end = offset + var_file_info.wLength
+
+            offset += size
+            assert offset%4 == 0
+
+            while offset < end:
+                if offset%4 != 0:
+                    offset += 2
+
+                size = len(struct_Var)
+                assert offset%4 == 0
+                var = struct_Var.unpack( data[offset:offset+size] )
+                var.dump( dprint, 'at offset 0x%x' % (offset,) )
+
+                var_end = offset + var.wLength
+                offset += size
+                if offset % 4 != 0:
+                    offset += 2
+
+                while offset < var_end:
+                    size = len(struct_VarValue)
+                    self.translation = struct_VarValue.unpack( data[offset:offset+size] )
+                    self.translation.dump( dprint, 'at offset 0x%x' % (offset,) )
+                    offset += size
+
+def hexDump( buffer, write ):
     all_parts = []
     all_chars = []
     for index, byte in enumerate( buffer ):
@@ -525,12 +690,12 @@ def hexDump( buffer ):
         if ord(' ') <= byte < 0x7f:
             all_chars.append( chr(byte) )
         else:
-            all_chars.append( ' ' )
+            all_chars.append( '.' )
 
         if index%16 == 15:
             all_parts.reverse()
             all_parts.append( ' %s' % (''.join( all_chars),) )
-            print( ' '.join( all_parts ) )
+            write( ' '.join( all_parts ) )
             all_parts = []
             all_chars = []
 
@@ -541,7 +706,7 @@ def hexDump( buffer ):
 
         all_parts.reverse()
         all_parts.append( ' %s' % (''.join( all_chars),) )
-        print( ' '.join( all_parts ) )
+        write( ' '.join( all_parts ) )
 
 def extractSzChar( data, offset ):
     all_chars = []
@@ -556,6 +721,20 @@ def extractSzChar( data, offset ):
 
     return offset, ''.join( all_chars )
 
+def packSzChar( chars ):
+    all_bytes = []
+    for ch in chars:
+        ch = ord(ch)
+        lo = ch & 0xff
+        hi = (ch>>8) & 0xff
+
+        all_bytes.append( lo )
+        all_bytes.append( hi )
+
+    all_bytes.append( 0 )
+    all_bytes.append( 0 )
+
+    return bytes( all_bytes )
 
 def updateVersionInfoInExe( exe_filename, version, description ):
     h = BeginUpdateResource( exe_filename, False )

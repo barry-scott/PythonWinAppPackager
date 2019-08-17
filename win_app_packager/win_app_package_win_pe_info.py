@@ -48,7 +48,7 @@ pe64_signature = 0x20b
 
 struct_pe32_opt_header = namedstruct.namedstruct( 'PE 32 Opt Header', '<'
     'H:signature '
-    'B:MajorLinkerVersion ' 
+    'B:MajorLinkerVersion '
     'B:MinorLinkerVersion '
     'L:SizeOfCode '
     'L:SizeOfInitializedData '
@@ -82,7 +82,7 @@ struct_pe32_opt_header = namedstruct.namedstruct( 'PE 32 Opt Header', '<'
 
 struct_pe64_opt_header = namedstruct.namedstruct( 'PE 64 Opt Header', '<'
     'H:signature '
-    'B:MajorLinkerVersion ' 
+    'B:MajorLinkerVersion '
     'B:MinorLinkerVersion '
     'L:SizeOfCode '
     'L:SizeOfInitializedData '
