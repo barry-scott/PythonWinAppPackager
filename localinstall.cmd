@@ -1,7 +1,7 @@
 setlocal
 if "%1" == "" (
-    echo "Usage: %0 <version>"
-    echo "       %0 3.6-32"
+    colour-print "<>em Usage: %0 <version><>"
+    colour-print "<>em        %0 3.7-64<>"
     goto :eof
 )
 
@@ -9,7 +9,9 @@ set PY_VER=%1
 
 for %%i in (dist\*.whl) do set WHEEL=%%~fi
 set PYTHONPATH=
-cd %userprofile%
+cd %USERPROFILE%
+
+colour-print "<>info Info:<> For Python <>em %%s<> installing <>em %%s<>" "%PY_VER%" "%WHEEL%"
 py -%PY_VER% -m pip install --user --upgrade %WHEEL%
 
 endlocal
