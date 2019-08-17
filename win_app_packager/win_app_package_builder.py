@@ -108,7 +108,7 @@ class AppPackage:
         self.app_type = self.APP_TYPE_CLI
         self.app_name = None
         self.app_icon = None
-        self.app_version = '0.0.0.0'
+        self.app_version = (0, 0, 0, 0)
         self.app_install_key = ''
         self.app_install_value = ''
 
@@ -166,6 +166,9 @@ class AppPackage:
         build a windows gui program.
     --name
         name the program (defaults to the <main-script> name).
+    --version <version>
+        Set the version of the .EXE to be <version>.
+        e.g 1.0.2.5
     --install-key <key>
     --install-value <value>
         The install path of the package can be read
@@ -225,7 +228,22 @@ class AppPackage:
                     self.app_icon = next(args)
 
                 elif arg == '--version':
-                    self.app_version = next(args)
+                    # expecting upto 4 int seperated by "."
+                    version = next(args)
+                    if version.strip() == '':
+                        raise AppPackageError( 'Invalid version is is empty' )
+
+                    try:
+                        int_version = list( int(n) for n in version.split('.') )
+                        # pad with 0 to make exactly 4 parts to the version
+                        while len(int_version) < 4:
+                            int_version.append( 0 )
+                        if len(int_version) > 4:
+                            raise AppPackageError( 'Invalid version %r - only 4 parts allowed' )
+                    except ValueError:
+                        raise AppPackageError( 'Invalid version %r' % (version,) )
+
+                    self.app_version = tuple(int_version)
 
                 elif arg == '--merge':
                     self.enable_merge = True

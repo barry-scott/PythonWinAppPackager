@@ -438,9 +438,9 @@ class VersionInfoResource:
     def setProperty( self, name, value ):
         self.all_properties[ name ] = value
 
-    def setVersion( self, str_version ):
-        int_version = tuple( int(n) for n in str_version.split('.') )
-        assert len(int_version) == 4, 'bad version %r' % (str_version,)
+    def setVersion( self, int_version ):
+        assert len(int_version) == 4, 'bad version %r' % (int_version,)
+        str_version = '%d.%d.%d.%d' % int_version
 
         self.all_properties[ 'ProductVersion' ] = str_version
         self.pack_fixed.dwProductVersion0 = int_version[0]

@@ -13,7 +13,7 @@ cd tests
 
 if exist pkg-cli rmdir /s /q pkg-cli
 mkdir pkg-cli
-py -%1-%2 -m win_app_packager build cli_test.py pkg-cli -cli
+py -%1-%2 -m win_app_packager build cli_test.py pkg-cli -cli --version 1.1
     if errorlevel 1 goto :eof
 
 call pkg-cli\cli_test
@@ -21,7 +21,7 @@ call pkg-cli\cli_test
 
 if exist pkg-gui rmdir /s /q pkg-gui
 mkdir pkg-gui
-py -%1-%2 -m win_app_packager build gui_test.py pkg-gui -gui
+py -%1-%2 -m win_app_packager build gui_test.py pkg-gui -gui --version 2.3.8
     if errorlevel 1 goto :eof
 
 call pkg-gui\gui_test

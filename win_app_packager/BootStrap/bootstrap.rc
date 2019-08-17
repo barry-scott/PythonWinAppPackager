@@ -14,8 +14,8 @@ begin
 end
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION    0,0,0,2
- PRODUCTVERSION 0,0,0,2
+ FILEVERSION    0,0,0,0
+ PRODUCTVERSION 0,0,0,0
  FILEFLAGSMASK  VS_FFI_FILEFLAGSMASK
  #ifdef _DEBUG
  FILEFLAGS      VER_DEBUG
@@ -30,15 +30,14 @@ VS_VERSION_INFO VERSIONINFO
     { 
         BLOCK "040904b0"
         {
-            VALUE "Comments",         "comment\0"
-            VALUE "CompanyName",      "comment\0"
-            VALUE "FileDescription",  "base file\0"
-            VALUE "FileVersion",      "0.0.0.2\0"
-            VALUE "InternalName",     "testTP\0"
-            VALUE "LegalCopyright",   "none\0"
-            VALUE "OriginalFilename", "test.exe\0"
-            VALUE "ProductName",      "test\0"
-            VALUE "ProductVersion",   "0.0.0.2\0"
+            VALUE "CompanyName",      "unknown"
+            VALUE "FileDescription",  "replace"
+            VALUE "FileVersion",      "0.0.0.0"
+            VALUE "InternalName",     "replace"
+            VALUE "LegalCopyright",   "none"
+            VALUE "OriginalFilename", "replace.exe"
+            VALUE "ProductName",      "replace"
+            VALUE "ProductVersion",   "0.0.0.0"
         } 
     }
     BLOCK "VarFileInfo"
