@@ -1,6 +1,8 @@
 #
 #   __init__.py
 #
+VERSION = '1.3.0'
+
 __commands = set( ['build', 'flags'] )
 
 def dispatchCommand( argv ):

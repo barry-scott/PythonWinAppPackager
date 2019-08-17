@@ -9,7 +9,8 @@ import distutils.dist
 
 import os.path
 
-version = '1.2.5'
+import win_app_packager
+version = win_app_packager.VERSION
 
 url = 'https://github.com/barry-scott/PythonWinAppPackager'
 
@@ -92,5 +93,5 @@ setuptools.setup(
                         ['BootStrap/obj/bootstrap-cli.exe'
                         ,'BootStrap/obj/bootstrap-gui.exe']},
 
-    install_requires="namedstruct >=1.1"
+    install_requires="namedstruct >=1.2.2"
 )
