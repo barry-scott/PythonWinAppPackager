@@ -15,26 +15,14 @@ python extensions and the DLLs that depend on.
 The inclusion of the source code allows users to modify the program,
 if they so desire.
 
-win_app_packer supports python 3 for win64 and starting with 1.1.0
-win32.
+win_app_packager supports python 3 for win64.
 
-1.2.0 changes how package contents is collected. All files within
-a package are included, not just the referenced include.
+1.3.0 supports changing the version resource of the created .EXE.
+The version fields that name the app are set to the app .EXE name.
 
-This, for example, allows packages like pytz to be packaged with its
-binary zoneinfo files. And it removes the need for the special case
-code for encodings.
+The --version option allows the app's version to be set.
 
-1.2.2 add the --modules-allowed-to-be-missing-file to allow the new
-module names to be added to the allowed to be missing list without
-requiring a new release of win-app-packager. Typcially packages that
-support both python 2  and python 3 will reference python 2 modules
-that can be ignored.
-
-1.2.4 fixed an issue with dbghelp.dll that is not required for the
-app package being reported as required.
-
-1.2.5 updated for python 3.7 and improve build scripts
+Python version 3.5, 3.6 and 3.7 are supported.
 
 Installation
 ------------
