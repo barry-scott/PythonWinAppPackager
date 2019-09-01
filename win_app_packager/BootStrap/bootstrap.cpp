@@ -58,6 +58,7 @@ extern "C" {
 
 DECLVAR( int, Py_VerboseFlag );
 DECLVAR( int, Py_IgnoreEnvironmentFlag );
+DECLVAR( int, Py_NoUserSiteDirectory );
 DECLPROC(   void, Py_Initialize, (void) );
 DECLPROC(   void, Py_SetProgramName, (wchar_t *) );
 DECLPROC(   void, Py_SetPythonHome, (wchar_t *) );
@@ -171,11 +172,16 @@ public:
         MessageBox( nullptr, L"Debug", L"PythonWinApp Boot Strap Error", MB_OK | MB_ICONERROR );
 #endif
 
+#if defined(BOOTSTRAP_DEBUG)
+        std::wcerr << "readConfigFromResources()" << std::endl;
+#endif
         readConfigFromResources();
 
         WCharT filename( c_pathname_size );
         filename << m_installation_folder << L"\\" RESOURCE_FOLDER_NAME "\\" << m_python_dll;
-
+#if defined(BOOTSTRAP_DEBUG)
+        std::wcerr << "LoadLibrary " << filename << std::endl;
+#endif
         m_hPython = LoadLibrary( filename );
         if( m_hPython == nullptr )
         {
@@ -185,6 +191,7 @@ public:
 
         GETVAR( Py_VerboseFlag );
         GETVAR( Py_IgnoreEnvironmentFlag );
+        GETVAR( Py_NoUserSiteDirectory );
         GETPROC( Py_Initialize );
         GETPROC( Py_SetProgramName );
         GETPROC( Py_SetPythonHome );
@@ -202,16 +209,46 @@ public:
         program_name << python_home << L"\\" << m_main_py_module << L".exe";
         m_stderr << "program home: " << program_name << std::endl;
 
+#if defined(BOOTSTRAP_DEBUG)
+        std::wcerr << "Py_SetProgramName " << program_name << std::endl;
+#endif
         NAME( Py_SetProgramName )( program_name );
+
+#if defined(BOOTSTRAP_DEBUG)
+        std::wcerr << "Py_SetPythonHome " << python_home << std::endl;
+#endif
         NAME( Py_SetPythonHome )( python_home );
 
-        *NAME( Py_IgnoreEnvironmentFlag ) = 1;          // do not allow env vars to change how we run
+#if defined(BOOTSTRAP_DEBUG)
+        std::wcerr << "Py_IgnoreEnvironmentFlag 1" << std::endl;
+#endif
+        *NAME( Py_IgnoreEnvironmentFlag ) = 1;      // do not allow env vars to change how we run
+
+#if defined(BOOTSTRAP_DEBUG)
+        std::wcerr << "Py_NoUserSiteDirectory 1" << std::endl;
+#endif
+        *NAME( Py_NoUserSiteDirectory ) = 1;        // do not allow users install packages to change how we run
+
+#if defined(BOOTSTRAP_DEBUG)
+        std::wcerr << "Py_VerboseFlag " << m_py_verbose << std::endl;
+#endif
         *NAME( Py_VerboseFlag ) = m_py_verbose;
 
         // between the program_name and the python_home
         // python can setup the sys.path it needs
+#if defined(BOOTSTRAP_DEBUG)
+        std::wcerr << "Py_Initialize" << std::endl;
+#endif
         NAME( Py_Initialize )();
+
+#if defined(BOOTSTRAP_DEBUG)
+        std::wcerr << "PyEval_InitThreads" << std::endl;
+#endif
         NAME( PyEval_InitThreads )();
+
+#if defined(BOOTSTRAP_DEBUG)
+        std::wcerr << "PySys_SetArgvEx" << std::endl;
+#endif
         NAME( PySys_SetArgvEx )( argc, argv, 0 );
 
         //
@@ -230,8 +267,19 @@ public:
 
         m_stderr << "boot script: " << boot_script << std::endl;
 
+#if defined(BOOTSTRAP_DEBUG)
+        std::wcerr << "Py_EncodeLocale" << std::endl;
+#endif
         char *locale_boot_script = NAME( Py_EncodeLocale )( boot_script, NULL );
+
+#if defined(BOOTSTRAP_DEBUG)
+        std::wcerr << "PyRun_SimpleString" << std::endl;
+#endif
         NAME( PyRun_SimpleString )( locale_boot_script );
+
+#if defined(BOOTSTRAP_DEBUG)
+        std::wcerr << "return 0" << std::endl;
+#endif
         return 0;
     }
 

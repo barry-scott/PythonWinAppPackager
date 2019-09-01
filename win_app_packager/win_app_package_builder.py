@@ -8,6 +8,7 @@ import pathlib
 import uuid
 import modulefinder
 import importlib
+import colour_text
 
 from . import win_app_package_win_pe_info
 from . import win_app_package_exe_config
@@ -98,6 +99,9 @@ class AppPackage:
         ] )
 
     def __init__( self ):
+        self.ct = colour_text.ColourText()
+        self.ct.initTerminal()
+
         # options
         self.enable_debug = False
         self.enable_verbose = False
@@ -129,6 +133,8 @@ class AppPackage:
         self.__all_library_files = set()
         self.__all_dlls = set()
 
+        self.__all_found_dlls = set()
+
         # how to find app packager resources
         self.win_app_packager_folder = pathlib.Path( sys.argv[0] ).parent
 
@@ -137,17 +143,17 @@ class AppPackage:
             print( 'Debug: %s' % (msg,) )
 
     def info( self, msg ):
-        print( 'Info: %s' % (msg,) )
+        print( self.ct('<>info Info:<> %s') % (msg,) )
 
     def verbose( self, msg ):
         if self.enable_verbose:
-            print( 'Info: %s' % (msg,) )
+            print( self.ct('<>info Info:<> %s') % (msg,) )
 
     def error( self, msg ):
-        print( 'Error: %s' % (msg,) )
+        print( self.ct('<>error Error: %s<>') % (msg,) )
 
     def warning( self, msg ):
-        print( 'Warn: %s' % (msg,) )
+        print( self.ct('<>em Warn:<> %s') % (msg,) )
 
     def usage( self ):
 ################################################################################
@@ -229,19 +235,24 @@ class AppPackage:
 
                 elif arg == '--version':
                     # expecting upto 4 int seperated by "."
-                    version = next(args)
-                    if version.strip() == '':
-                        raise AppPackageError( 'Invalid version is is empty' )
-
                     try:
+                        version = next(args)
+                        if version.strip() == '':
+                            raise AppPackageError( '--version - value must not be empty' )
+
                         int_version = list( int(n) for n in version.split('.') )
                         # pad with 0 to make exactly 4 parts to the version
                         while len(int_version) < 4:
                             int_version.append( 0 )
+
                         if len(int_version) > 4:
-                            raise AppPackageError( 'Invalid version %r - only 4 parts allowed' )
+                            raise AppPackageError( '--version %r - only 4 parts allowed' )
+
+                    except StopIteration:
+                        raise AppPackageError( '--version - value required' )
+
                     except ValueError:
-                        raise AppPackageError( 'Invalid version %r' % (version,) )
+                        raise AppPackageError( '--version - invalid value %r' % (version,) )
 
                     self.app_version = tuple(int_version)
 
@@ -293,7 +304,7 @@ class AppPackage:
             #
             #   Look for modules using two methods
             #   1. Import the main program and see what ends up in sys.modules
-            #   2. Force "encodings" to be included
+            #   2. Force "encodings" to be included as python will not start without encodings
             #   3. Use modulefinder to locate imports done at runtime
             #
 
@@ -323,10 +334,10 @@ class AppPackage:
             all_missing_but_needed = all_missing - self.all_modules_allowed_to_be_missing
 
             for x in all_missing_but_needed:
-                self.error( 'module %s is missing but is required' % (x,) )
+                self.error( 'Module %s is missing but is required' % (x,) )
 
             for x in maybe:
-                self.warning( 'module %s maybe missing' % (x,) )
+                self.warning( 'Module %s maybe missing' % (x,) )
 
             if len(all_missing_but_needed) > 0:
                 return 1
@@ -349,7 +360,6 @@ class AppPackage:
             self.createAppPackage()
 
             self.info( 'Completed sucessfully' )
-
             return 0
 
         except AppPackageError as e:
@@ -374,30 +384,32 @@ class AppPackage:
             raise AppPackageError( str(e) )
 
     def processModule( self, name, module ):
-        self.verbose( 'Checking module %s' % (name,) )
         if not hasattr( module, '__file__' ) or module.__file__ is None:
-            self.verbose( '%s is builtin - ignoring' % (name,) )
+            self.verbose( 'Module %s is builtin - ignoring' % (name,) )
             return
 
         filename = pathlib.Path( module.__file__ ).resolve()
-        self.debug( 'module type %s filename %s' % (filename.suffix, filename) )
+        self.verbose( 'Module %s type %s filename %s' % (name, filename.suffix, filename) )
 
         # is this file part of the python installation?
-        for path in [sys.prefix]+sys.path:
+        for root in [sys.base_prefix] + sys.path:
             try:
-                path = pathlib.Path( path )
-                path = path.resolve()
+                root = pathlib.Path( root )
+                root = root.resolve()
+
+                # find the suffix relative to a python home
+                library_filename_suffix = filename.relative_to( root )
 
             except FileNotFoundError:
+                # root does not exist
                 continue
 
-            try:
-                library_filename_suffix = filename.relative_to( path )
-
             except ValueError:
+                # of filename is not relative to root
                 continue
 
             if filename.match( '*.py' ):
+                self.verbose( 'Module %s suffix %s' % (name, library_filename_suffix) )
                 self.addPyFileToPackage( filename, library_filename_suffix )
                 if filename.name == '__init__.py':
                     # assume that all files in the module need including
@@ -412,7 +424,7 @@ class AppPackage:
 
             return
 
-        raise AppPackageError( 'Dropped file %s' % (filename,) )
+        raise AppPackageError( 'Cannot find required file %s' % (filename,) )
 
     def addAllModuleFilesToPackage( self, module_dirname, library_dirname_suffix ):
         self.verbose( 'Adding module files to %s from %s' % (library_dirname_suffix, module_dirname) )
@@ -428,10 +440,11 @@ class AppPackage:
 
     def addPyFileToPackage( self, filename, library_filename_suffix ):
         self.verbose( 'Adding source file %s from %s' % (library_filename_suffix, filename) )
-        self.__all_library_files.add( PackageFile( filename, library_filename_suffix ) )
+        self.__all_library_files.add( PackageFile( self, filename, library_filename_suffix ) )
 
     def addWinPeFileToPackage( self, filename, library_filename_suffix ):
-        pf = PackageFile( filename, library_filename_suffix )
+        self.debug( 'AppPackage.addWinPeFileToPackage( %r, %r )' % (filename, library_filename_suffix) )
+        pf = PackageFile( self, filename, library_filename_suffix )
         if pf not in self.__all_dlls:
             self.verbose( 'Adding DLL %s from %s' % (library_filename_suffix, filename) )
             self.__all_dlls.add( pf )
@@ -439,6 +452,7 @@ class AppPackage:
             self.addWinPeFileDependenciesToPackage( filename )
 
     def addWinPeFileDependenciesToPackage( self, filename ):
+        self.debug( 'AppPackage.addWinPeFileDependenciesToPackage( %r )' % (filename,) )
         all_dlls = win_app_package_win_pe_info.getPeImportDlls( self, filename )
         self.verbose( 'Dependancies of DLL %s:' % (filename,) )
         for dll in sorted( all_dlls ):
@@ -447,38 +461,58 @@ class AppPackage:
         all_dll_to_be_scanned = []
 
         for dll in sorted( all_dlls ):
+            # only need to scan each DLL once
+            if dll in self.__all_found_dlls:
+                continue
+            self.__all_found_dlls.add( dll )
+
             dll_path = self.findDll( dll, filename.parent )
             if self.isStandardDll( dll_path ):
                 self.verbose( 'No need to package standard DLL %s' % (dll_path,) )
                 continue
 
-            all_dll_to_be_scanned.append( (dll_path, self.findLibraryLocationForDll( dll_path )) )
+            all_dll_to_be_scanned.append( (dll_path, self.findPackageSuffixForDll( dll_path )) )
 
         for dll_path, library_filename_suffix in all_dll_to_be_scanned:
-            self.addWinPeFileToPackage( dll_path, library_filename_suffix )
+            self.addWinPeFileToPackage( pathlib.Path( dll_path ), library_filename_suffix )
 
-    def findLibraryLocationForDll( self, dll_path ):
-        for path in [sys.prefix]+sys.path:
+    def findPackageSuffixForDll( self, dll_path ):
+        # either its in the prefix location or on the path.
+        # use sys.base_prefix so that this works for venv or not venv.
+        # put prefix first so that python*.dll and vcruntime*.dll will be found
+        # as shipped with the python installation.
+        for root in  [sys.base_prefix] + sys.path:
             try:
+                root = pathlib.Path( root )
+                path = root / dll_path;
+                self.debug( 'Looking for %s in %s' % (dll_path, path) )
+
                 path = pathlib.Path( path ).resolve()
+                if not path.exists():
+                    continue
+
+                suffix = dll_path.relative_to( root )
+                self.debug( 'DLL root %s suffix %s' % (root, suffix) )
+
+                return suffix
 
             except FileNotFoundError:
+                self.debug( '-- FileNotFoundError' )
                 continue
 
-            try:
-                return dll_path.relative_to( path )
-
-            except ValueError:
+            except ValueError as e:
+                self.debug( '-- ValueError %s' % (e,) )
                 continue
 
-        raise AppPackageError( 'Dropped DLL %s' % (dll_path,) )
+        raise AppPackageError( 'Cannot find required DLL %s' % (dll_path,) )
 
-    def findDll( self, dll_name, prefered_location ):
+    def findDll( self, dll_name, preferred_location ):
         # look for the DLL in an ordered set of locations
-        # starting with the 'prefered_location'
+        # starting with the 'preferred_location'
         # and then working along the 'PATH'
 
-        for folder in [prefered_location,'']+[sys.prefix]+os.environ['PATH'].split( os.pathsep ):
+        self.verbose( 'Find DLL %s (preferred_location %s)' % (dll_name, preferred_location) )
+        for folder in [sys.base_prefix, preferred_location]+os.environ['PATH'].split( os.pathsep ):
             try:
                 folder = pathlib.Path( folder ).resolve()
 
@@ -514,7 +548,7 @@ class AppPackage:
         # the special PyWinAppLib folder is within it.
         #
         # This is to defend against removing files
-        # unintended locations like c:\windows
+        # from unintended locations like c:\windows
         #
         if not self.package_folder.exists():
             return
@@ -552,13 +586,11 @@ class AppPackage:
 
         # copy the programs python source code
         for lib_file in sorted( self.__all_library_files ):
-            self.verbose( 'Copying Library file: %s' % (lib_file.source_file,) )
-            lib_file.copy( path_resource_folder )
+            lib_file.copy( self.ct('Copying Library file <>em %s<>'), path_resource_folder )
 
         # copy the programs DLL dependencies
         for dll_file in sorted( self.__all_dlls ):
-            self.verbose( 'Copying DLL: %s' % (dll_file.source_file,) )
-            dll_file.copy( path_resource_folder )
+            dll_file.copy( self.ct('Copying DLL <>em %s<>'), path_resource_folder )
 
             if self.enable_bootstrap_debug:
                 # include PDB file need to support debugging
@@ -572,13 +604,14 @@ class AppPackage:
             bootstrap_filename = self.win_app_packager_folder / 'BootStrap' / 'obj' / 'bootstrap-gui.exe'
 
         bootstrap_exe = pathlib.Path( '%s.exe' % (self.app_name,) )
-        p = PackageFile( bootstrap_filename, bootstrap_exe )
-        p.copy( self.package_folder )
+        p = PackageFile( self, bootstrap_filename, bootstrap_exe )
+        p.copy( self.ct('Package file <>em %s<>'), self.package_folder )
 
         p = PackageFile(
+                self,
                 self.win_app_packager_folder / 'run_win_app.py',
                 self.library_folder / 'run_win_app.py' )
-        p.copy( self.package_folder )
+        p.copy( self.ct('Package file <>em %s<>'), self.package_folder )
 
         if self.enable_bootstrap_debug:
             # include PDB file need to support debugging
@@ -655,15 +688,21 @@ EndGlobal
 
 
 class PackageFile:
-    def __init__( self, source_file, package_file ):
+    def __init__( self, app, source_file, package_file ):
+        assert source_file.exists(), source_file
+        assert not package_file.is_absolute(), package_file
+
+        self.app = app
         self.source_file = source_file
         self.package_file = package_file
 
-    def copy( self, to_folder ):
+    def copy( self, msg_fmt, to_folder ):
+        assert to_folder.relative_to( self.app.package_folder ), to_folder
+
         dest_file = to_folder / self.package_file
         dest_file.parent.mkdir( parents=True, exist_ok=True )
 
-        self.__copy( self.source_file, dest_file )
+        self.__copy( msg_fmt, self.source_file, dest_file )
 
     def copyPdb( self, to_folder ):
         # if there is a .pdb file copy it
@@ -673,10 +712,11 @@ class PackageFile:
 
         dest_pdb = (to_folder / self.package_file).with_suffix( '.pdb' )
 
-        self.__copy( source_pdb, dest_pdb )
+        self.__copy( self.app.ct('Copy PDF <>em %s<>'), source_pdb, dest_pdb )
 
-    def __copy( self, src, dst ):
-        #print( '__copy( %s, %s )' % (src, dst) )
+    def __copy( self, msg_fmt, src, dst ):
+        self.app.verbose( msg_fmt % (src,) )
+        self.app.verbose( self.app.ct('  to <>em %s<>') % (dst,) )
 
         with src.open( 'rb' ) as f_in, dst.open( 'wb' ) as f_out:
             while True:
