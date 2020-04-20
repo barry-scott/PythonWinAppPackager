@@ -6,9 +6,15 @@ import sys
 import os
 import pathlib
 import uuid
-import modulefinder
 import importlib
 import colour_text
+
+# modulefinder is broken in 3.8
+# was the fixed bundled copy
+if sys.version_info.major == 3 and sys.version_info.minor == 8:
+    from . import modulefinder
+else:
+    import modulefinder
 
 from . import win_app_package_win_pe_info
 from . import win_app_package_exe_config
@@ -77,8 +83,14 @@ class AppPackage:
         'smmap.SlidingWindowMapBuffer',
         'smmap.SlidingWindowMapManager',
         'smmap.StaticWindowMapManager',
-        ] )
 
+        # new in python3.8 to ignore
+        '_posixshmem',
+        'resource',
+        'win32evtlog',
+        'win32evtlogutil',
+        'asyncio.DefaultEventLoopPolicy',
+        ] )
     all_imported_modules_to_exclude = set( [
         'ctypes',
         'ctypes._endian',

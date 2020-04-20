@@ -8,6 +8,8 @@ call build.cmd 3.6 64
     if errorlevel 1 goto :eof
 call build.cmd 3.7 64
     if errorlevel 1 goto :eof
+call build.cmd 3.8 64
+    if errorlevel 1 goto :eof
 
 colour-print "<>info Info:<> Built files in uploads"
 dir /s /b uploads

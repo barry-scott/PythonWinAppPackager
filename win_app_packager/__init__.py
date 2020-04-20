@@ -1,7 +1,7 @@
 #
 #   __init__.py
 #
-VERSION = '1.4.0'
+VERSION = '1.4.1'
 
 __commands = set( ['build', 'flags'] )
 
