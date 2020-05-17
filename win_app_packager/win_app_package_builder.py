@@ -9,12 +9,7 @@ import uuid
 import importlib
 import colour_text
 
-# modulefinder is broken in 3.8
-# was the fixed bundled copy
-if sys.version_info.major == 3 and sys.version_info.minor == 8:
-    from . import modulefinder
-else:
-    import modulefinder
+import modulefinder
 
 from . import win_app_package_win_pe_info
 from . import win_app_package_exe_config
