@@ -85,6 +85,10 @@ class AppPackage:
         'win32evtlog',
         'win32evtlogutil',
         'asyncio.DefaultEventLoopPolicy',
+
+        # new in python 3.9
+        'pep517',
+        '_testinternalcapi',
         ] )
     all_imported_modules_to_exclude = set( [
         'ctypes',
@@ -324,6 +328,8 @@ class AppPackage:
             importlib.import_module( main_module )
             self.info( 'Import complete for %s' % (main_module,) )
 
+
+
             # save the list of modules imported
             all_imported_module_names = list( sys.modules.keys() )
 
@@ -340,11 +346,11 @@ class AppPackage:
             all_missing = set( missing )
             all_missing_but_needed = all_missing - self.all_modules_allowed_to_be_missing
 
-            for x in all_missing_but_needed:
-                self.error( 'Module %s is missing but is required' % (x,) )
+            for module_name in all_missing_but_needed:
+                self.error( 'Module %s is missing but is required' % (module_name,) )
 
-            for x in maybe:
-                self.warning( 'Module %s maybe missing' % (x,) )
+            for module_name in maybe:
+                self.warning( 'Module %s maybe missing' % (module_name,) )
 
             if len(all_missing_but_needed) > 0:
                 return 1
