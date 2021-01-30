@@ -20,80 +20,45 @@ if exist build rmdir /s /q build
 if exist win_app_packager.egg-info rmdir /s /q win_app_packager.egg-info
 if exist win_app_packager\BootStrap\obj rmdir /s /q win_app_packager\BootStrap\obj
 
-goto build_%BUILD_ARCH%
-:build_32
-setlocal
-colour-print "<>info Info:<> Build Python <>em %%s<> for 32 bit" "%PY_VER%"
+echo on
+if exist venv-%PY_VER% rmdir /s /q venv-%PY_VER%
+
+colour-print "<>info Info:<> build venv requirements"
+py -%PY_VER% -m venv venv-%PY_VER%
+venv-%PY_VER%\scripts\pip install -r requirements.txt
+set VPYTHON=%CD%\venv-%PY_VER%\scripts\python
+
+if "%BUILD_ARCH%" == "32" set VC_ARCH=x86
+if "%BUILD_ARCH%" == "64" set VC_ARCH=x64
+if "%VC_ARCH%" == "" goto :error
+
+colour-print "<>info Info:<> Build Python <>em %%s<> for %BUILD_ARCH% bit" "%PY_VER%"
 
 if exist "c:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" (
     colour-print "<>em Found compiler VC 2017<>"
-    call "c:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" x86
+    call "c:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" %VC_ARCH%
     if errorlevel 1 goto :error
 )
 if exist "c:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall.bat" (
     colour-print "<>em Found compiler VC 2019<>"
-    call "c:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall.bat" x86
+    call "c:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall.bat" %VC_ARCH%
     if errorlevel 1 goto :error
 )
 
-pushd win_app_packager\BootStrap
-nmake /nologo
-    if errorlevel 1 goto :error
-popd >NUL
-
-colour-print "<>info Info:<> Install requirements"
-py -%PY_VER% -m pip install --user --no-warn-script-location --upgrade -r requirements.txt
-
-colour-print "<>info Info:<> Build wheel"
-py -%PY_VER% setup.py --quiet sdist bdist_wheel %3 %4 %5 %6
-    if errorlevel 1 goto :error
-
-dir /s /b dist\*.whl
-colour-print "<>info Info:<> Check wheel"
-py -%PY_VER% -m twine check dist\*
-    if errorlevel 1 goto :error
-
-endlocal
-)
-goto :final_actions
-
-:build_64
-setlocal
-colour-print "<>info Info:<> Build Python <>em %%s<> for 64 bit" "%PY_VER%"
-
-if exist "c:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" (
-    colour-print "<>em Found compiler VC 2017<>"
-    call "c:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" x64
-    if errorlevel 1 goto :error
-)
-if exist "c:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall.bat" (
-    colour-print "<>em Found compiler VC 2019<>"
-    call "c:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall.bat" x64
-    if errorlevel 1 goto :error
-)
 colour-print "<>info Info:<> Build EXE"
-
 pushd win_app_packager\BootStrap
-nmake /nologo
+nmake /nologo VPYTHON=%VPYTHON%
     if errorlevel 1 goto :error
 popd >NUL
 
-colour-print "<>info Info:<> Install requirements"
-py -%PY_VER% -m pip install --no-warn-script-location --user --upgrade -r requirements.txt
-
 colour-print "<>info Info:<> Build wheel"
-py -%PY_VER% setup.py --quiet sdist bdist_wheel %3 %4 %5 %6
+%VPYTHON% setup.py --quiet sdist bdist_wheel %3 %4 %5 %6
     if errorlevel 1 goto :error
 
 dir /s /b dist\*.whl
 colour-print "<>info Info:<> Check wheel"
-py -%PY_VER% -m twine check dist\*
+%VPYTHON% -m twine check dist\*
     if errorlevel 1 goto :error
-
-endlocal
-goto :final_actions
-
-:final_actions
 
 colour-print "<>info Info:<> Run tests for Python %%s" "%PY_VER%"
 call tests\run-tests.cmd %PY_VER%

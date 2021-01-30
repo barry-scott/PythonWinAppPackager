@@ -73,7 +73,7 @@ obj\bootstrap.res : bootstrap.rc obj\bootstrap-resource-ids.h
 	rc /nologo /v /r /i obj /foobj\bootstrap.res bootstrap.rc
 
 obj\bootstrap-resource-ids.h : ..\win_app_package_exe_config.py
-	py -%PY_VER% ..\win_app_package_exe_config.py create obj\bootstrap-resource-ids.h
+	$(VPYTHON) ..\win_app_package_exe_config.py create obj\bootstrap-resource-ids.h
 
 clean::
 	if exist obj\bootstrap.res del obj\bootstrap.res

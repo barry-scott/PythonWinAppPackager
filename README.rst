@@ -17,6 +17,8 @@ if they so desire.
 
 win_app_packager supports python 3 for win64.
 
+1.4.2 add support for python 3.9
+
 1.4.1 add support for python 3.8 (includes patched modulefinder.py)
 
 1.4.0 add support for packaging projects from a virtual env (venv).

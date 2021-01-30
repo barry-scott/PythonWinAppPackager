@@ -1,12 +1,12 @@
 setlocal
-set PY_VER=3.8
+set PY_VER=3.9
 if X%1 == X (
     echo provide password as quoted %%1 arg
     goto :eof
 )
 
 set HOME=%USERPROFILE%
-py -%PY_VER% -m twine check uploads\*
+venv-%PY_VER%-64\scripts\python -m twine check uploads\*
     if errorlevel 1 goto :eof
-py -%PY_VER% -m twine upload -p %1 uploads\*
+venv-%PY_VER%-64\scripts\python -m twine upload -p %1 uploads\*
 endlocal
