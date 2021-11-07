@@ -89,6 +89,14 @@ class AppPackage:
         # new in python 3.9
         'pep517',
         '_testinternalcapi',
+
+        # with python 3.10 and newer packages on PyPI
+        'fcntl',
+        'dateutil',
+        'backports',
+        'backports.zoneinfo',
+        'pytz',
+        'pytz.tzinfo',
         ] )
     all_imported_modules_to_exclude = set( [
         'ctypes',
@@ -170,6 +178,7 @@ class AppPackage:
 ################################################################################
         print(
 '''python3 -m win_app_packager build <main-script> <package-folder> [<options>...]
+
   main-script
     - python main module
   package-folder
@@ -327,8 +336,6 @@ class AppPackage:
             self.info( 'Importing %s' % (main_module,) )
             importlib.import_module( main_module )
             self.info( 'Import complete for %s' % (main_module,) )
-
-
 
             # save the list of modules imported
             all_imported_module_names = list( sys.modules.keys() )

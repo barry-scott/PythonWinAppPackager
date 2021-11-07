@@ -61,11 +61,13 @@ colour-print "<>info Info:<> Check wheel"
     if errorlevel 1 goto :error
 
 colour-print "<>info Info:<> Run tests for Python %%s" "%PY_VER%"
-call tests\run-tests.cmd %PY_VER%
 
 if not exist uploads mkdir uploads
 copy dist\*.whl uploads
 copy dist\*.tar.gz uploads
+
+call tests\run-tests.cmd %PY_VER%
+
 goto :eof
 
 :error
