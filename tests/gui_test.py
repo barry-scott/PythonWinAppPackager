@@ -21,8 +21,11 @@ class HelloWindow(QMainWindow):
 
         self.setCentralWidget( QLabel( ' GUI test - python %s ' % (py_ver,), self ) )
 
-if __name__ == "__main__":
-    app = QtWidgets.QApplication( sys.argv )
+def main( argv ):
+    app = QtWidgets.QApplication( argv )
     main_win = HelloWindow()
     main_win.show()
-    sys.exit( app.exec_() )
+    return app.exec_()
+
+if __name__ == "__main__":
+    sys.exit( main( sys.argv ) )
