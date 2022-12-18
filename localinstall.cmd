@@ -1,7 +1,7 @@
 setlocal
 if "%1" == "" (
-    colour-print "<>em Usage: %0 <version><>"
-    colour-print "<>em        %0 3.7-64<>"
+    py -3 -m colour_text "<>em Usage: %0 <version><>"
+    py -3 -m colour_text "<>em        %0 3.10-64<>"
     goto :eof
 )
 
@@ -14,7 +14,7 @@ for %%i in (uploads\*-cp%MAJ%%MIN%-*.whl) do set WHEEL=%%~fi
 set PYTHONPATH=
 cd %USERPROFILE%
 
-colour-print "<>info Info:<> For Python <>em %%s<> installing <>em %%s<>" "%PY_VER%" "%WHEEL%"
+py -3 -m colour_text "<>info Info:<> For Python <>em %%s<> installing <>em %%s<>" "%PY_VER%" "%WHEEL%"
 py -%PY_VER% -m pip uninstall --yes win-app-packager
 py -%PY_VER% -m pip install --user --upgrade %WHEEL%
 
