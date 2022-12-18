@@ -17,6 +17,14 @@ if they so desire.
 
 win_app_packager supports python 3 for win64.
 
+1.5.0 add supoprt for python 3.11
+Fix issue with not finding python3XX.dll
+
+If environment variable PY_WIN_APP_DEBUG is set to 1 then
+show debug information.
+
+Add GUI test for PyQt6
+
 1.4.3 add support for python 3.10
 Add test for cli tzlocal.
 Kits built for 3.9 and 3.10 only.
