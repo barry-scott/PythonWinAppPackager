@@ -115,6 +115,11 @@ public:
         return m_str;
     }
 
+    int size()
+    {
+        return m_allocated_size;
+    }
+
 private:
     int m_allocated_size;
     wchar_t  *m_str;
@@ -133,6 +138,8 @@ public:
     : m_stderr()
     , m_hApp( GetModuleHandle( nullptr ) )
     , m_hPython( nullptr )
+    , m_win_app_debug( c_filename_size )
+    , m_debug( false )
     , m_installation_folder_key( c_pathname_size )
     , m_installation_folder_value( c_pathname_size )
     , m_installation_folder( c_pathname_size )
@@ -168,9 +175,22 @@ public:
 
     int _main( int argc, wchar_t **argv )
     {
-#if defined(BOOTSTRAP_DEBUG)
-        MessageBox( nullptr, L"Debug", L"PythonWinApp Boot Strap start", MB_OK | MB_ICONERROR );
+        GetEnvironmentVariableW( L"PY_WIN_APP_DEBUG", m_win_app_debug, m_win_app_debug.size() );
+        if( m_win_app_debug.c_str()[0] != 0
+        &&  m_win_app_debug.c_str()[0] == '1' )
+        {
+            m_debug = true;
+        }
+
+        if( m_debug )
+        {
+#if defined(_CONSOLE)
+            std::wcerr << "PythonWinApp Bootstrap starting" << std::endl;
 #endif
+#if defined( _WINDOWS )
+            MessageBox( nullptr, L"Starting", L"PythonWinApp Bootstrap", MB_OK | MB_ICONERROR );
+#endif
+        }
 
         m_stderr << "readConfigFromResources()" << std::endl;
         readConfigFromResources();
@@ -256,21 +276,27 @@ public:
         m_stderr << "Py_EncodeLocale" << std::endl;
         char *locale_boot_script = NAME( Py_EncodeLocale )( boot_script, NULL );
 
-        MessageBox( nullptr, m_stderr.str().data(), L"PythonWinApp Boot Strap Debug 1", MB_OK | MB_ICONERROR );
+#if defined(_CONSOLE)
+            std::wcerr << "PyWinAppRes before PyRun_SimpleString:" << std::endl;
+            std::wcerr << m_stderr.str();
+#endif
+
+#if defined(_WINDOWS)
+            MessageBox( nullptr, m_stderr.str().data(), L"PyWinAppRes before PyRun_SimpleString", MB_OK | MB_ICONERROR );
+#endif
 
         m_stderr << "PyRun_SimpleString" << std::endl;
         NAME( PyRun_SimpleString )( locale_boot_script );
 
         m_stderr << "return 0" << std::endl;
-        MessageBox( nullptr, m_stderr.str().data(), L"PythonWinApp Boot Strap Debug 2", MB_OK | MB_ICONERROR );
         return 0;
     }
 
     void readConfigFromResources()
     {
-        readConfigString( IDS_INSTALL_FOLDER_KEY, m_installation_folder_key, c_filename_size, true );
-        readConfigString( IDS_PYTHON_DLL, m_python_dll, c_filename_size );
-        readConfigString( IDS_MAIN_PY_MODULE, m_main_py_module, c_filename_size );
+        readConfigString( IDS_INSTALL_FOLDER_KEY, m_installation_folder_key, m_installation_folder_key.size(), true );
+        readConfigString( IDS_PYTHON_DLL, m_python_dll, m_python_dll.size() );
+        readConfigString( IDS_MAIN_PY_MODULE, m_main_py_module, m_main_py_module.size() );
 
         wchar_t buffer[2];
         readConfigString( IDS_PY_VERBOSE, buffer, 2, true );
@@ -278,7 +304,7 @@ public:
 
         if( m_installation_folder_key[0] != 0 )
         {
-            readConfigString( IDS_INSTALL_FOLDER_KEY, m_installation_folder_value, c_filename_size );
+            readConfigString( IDS_INSTALL_FOLDER_KEY, m_installation_folder_value, m_installation_folder_value.size() );
             m_stderr << "readConfigString m_installation_folder_value " << m_installation_folder_value << std::endl;
             readConfigFromRegistry();
             m_stderr << "readConfigFromRegistry m_installation_folder " << m_installation_folder << std::endl;
@@ -286,7 +312,7 @@ public:
         else
         {
             // use path to this exe
-            GetModuleFileName( nullptr, m_installation_folder, c_pathname_size );
+            GetModuleFileName( nullptr, m_installation_folder, m_installation_folder.size() );
             m_stderr << "GetModuleFileName m_installation_folder " << m_installation_folder << std::endl;
 
             // dirname
@@ -332,12 +358,12 @@ public:
             throw BootstrapError();
         }
 
-        DWORD value_length = c_pathname_size;
+        DWORD value_length = m_installation_folder_value.size();
         rc = RegGetValue( reg_key, nullptr, m_installation_folder_value, RRF_RT_REG_SZ, nullptr, m_installation_folder, &value_length );
         if( rc != ERROR_SUCCESS )
         {
             wchar_t buffer[256];
-            FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM, 0, rc, 0, buffer, 256, nullptr );
+            FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM, 0, rc, 0, buffer, sizeof(buffer)/sizeof(wchar_t), nullptr );
             m_stderr << "failed to read " << m_installation_folder_value << " registry value from key " << m_installation_folder_key << " rc " << rc << " " << buffer << std::endl;
             throw BootstrapError();
         }
@@ -348,8 +374,10 @@ private:
 
     HINSTANCE m_hApp;
     HMODULE m_hPython;
-    static const int c_pathname_size = 1024;
-    static const int c_filename_size = 64;
+    static const int c_pathname_size = 65536;
+    static const int c_filename_size = 128;
+    WCharT m_win_app_debug;
+    bool m_debug;
     WCharT m_installation_folder_key;
     WCharT m_installation_folder_value;
     WCharT m_installation_folder;
@@ -367,10 +395,11 @@ int wmain( int argc, wchar_t **argv, wchar_t **envp )
 #endif
 
 #if defined(_WINDOWS)
-int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
-                     _In_opt_ HINSTANCE hPrevInstance,
-                     _In_ LPWSTR    lpCmdLine,
-                     _In_ int       nCmdShow)
+int APIENTRY wWinMain(
+    _In_ HINSTANCE hInstance,
+    _In_opt_ HINSTANCE hPrevInstance,
+    _In_ LPWSTR lpCmdLine,
+    _In_ int nCmdShow )
 {
     BootstrapApp client;
     return client.main( __argc, __wargv );
