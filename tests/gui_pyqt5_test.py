@@ -17,9 +17,9 @@ class HelloWindow(QMainWindow):
         py_ver = '%d.%d-%d' % (sys.version_info.major, sys.version_info.minor, size_int_t)
 
         self.setMinimumSize( QSize(350, 100) )
-        self.setWindowTitle( 'GUI test - python %s' % (py_ver,) )
+        self.setWindowTitle( 'PyQt5 GUI test - python %s' % (py_ver,) )
 
-        self.setCentralWidget( QLabel( ' GUI test - python %s ' % (py_ver,), self ) )
+        self.setCentralWidget( QLabel( ' PyQt5 GUI test - python %s ' % (py_ver,), self ) )
 
 def main( argv ):
     app = QtWidgets.QApplication( argv )
