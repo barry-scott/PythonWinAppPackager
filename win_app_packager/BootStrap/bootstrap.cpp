@@ -176,8 +176,8 @@ public:
     int _main( int argc, wchar_t **argv )
     {
         GetEnvironmentVariableW( L"PY_WIN_APP_DEBUG", m_win_app_debug, m_win_app_debug.size() );
-        if( m_win_app_debug.c_str()[0] != 0
-        &&  m_win_app_debug.c_str()[0] == '1' )
+        if( m_win_app_debug.c_str()[0] == '1'
+        &&  m_win_app_debug.c_str()[1] == 0 )
         {
             m_debug = true;
         }
@@ -276,6 +276,8 @@ public:
         m_stderr << "Py_EncodeLocale" << std::endl;
         char *locale_boot_script = NAME( Py_EncodeLocale )( boot_script, NULL );
 
+        if( m_debug )
+        {
 #if defined(_CONSOLE)
             std::wcerr << "PyWinAppRes before PyRun_SimpleString:" << std::endl;
             std::wcerr << m_stderr.str();
@@ -284,11 +286,10 @@ public:
 #if defined(_WINDOWS)
             MessageBox( nullptr, m_stderr.str().data(), L"PyWinAppRes before PyRun_SimpleString", MB_OK | MB_ICONERROR );
 #endif
+        }
 
-        m_stderr << "PyRun_SimpleString" << std::endl;
         NAME( PyRun_SimpleString )( locale_boot_script );
 
-        m_stderr << "return 0" << std::endl;
         return 0;
     }
 
